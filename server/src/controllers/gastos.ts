@@ -151,13 +151,13 @@ export const downloadVouchers = async (req: AuthRequest, res: Response) => {
 
     try {
         const gastos = await prisma.gasto.findMany({
-            where: { funcionId },
+            where: { funcionId: funcionId as string },
             include: { comprobanteDocumento: true }
         });
 
-        const vouchers = gastos
-            .filter(g => g.comprobanteDocumento && g.comprobanteDocumento.linkDrive)
-            .map(g => g.comprobanteDocumento!);
+        const vouchers = (gastos as any)
+            .filter((g: any) => g.comprobanteDocumento && g.comprobanteDocumento.linkDrive)
+            .map((g: any) => g.comprobanteDocumento!);
 
         if (vouchers.length === 0) {
             return res.status(404).json({ error: 'No hay comprobantes para esta función' });

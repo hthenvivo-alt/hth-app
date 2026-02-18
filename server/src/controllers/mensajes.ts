@@ -45,7 +45,7 @@ export const deleteMensaje = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     try {
         const mensaje = await prisma.mensaje.findUnique({
-            where: { id }
+            where: { id: id as string }
         });
 
         if (!mensaje) return res.status(404).json({ error: 'Mensaje no encontrado' });
@@ -55,7 +55,7 @@ export const deleteMensaje = async (req: AuthRequest, res: Response) => {
             return res.status(403).json({ error: 'No autorizado' });
         }
 
-        await prisma.mensaje.delete({ where: { id } });
+        await prisma.mensaje.delete({ where: { id: id as string } });
         res.status(204).send();
     } catch (error) {
         res.status(500).json({ error: 'Error deleting mensaje' });

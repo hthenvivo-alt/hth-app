@@ -7,7 +7,7 @@ export const getInvitados = async (req: Request, res: Response) => {
     const { funcionId } = req.params;
     try {
         const invitados = await prisma.invitado.findMany({
-            where: { funcionId },
+            where: { funcionId: funcionId as string },
             orderBy: { created_at: 'desc' }
         });
         res.json(invitados);
@@ -48,10 +48,10 @@ export const deleteInvitado = async (req: Request, res: Response) => {
 export const exportToExcel = async (req: Request, res: Response) => {
     const { funcionId } = req.params;
     try {
-        const funcion = await prisma.funcion.findUnique({
-            where: { id: funcionId },
+        const funcion = (await prisma.funcion.findUnique({
+            where: { id: funcionId as string },
             include: { obra: true, invitados: true }
-        });
+        })) as any;
 
         if (!funcion) return res.status(404).json({ error: 'Función no encontrada' });
 
@@ -85,10 +85,10 @@ export const exportToExcel = async (req: Request, res: Response) => {
 export const exportToPDF = async (req: Request, res: Response) => {
     const { funcionId } = req.params;
     try {
-        const funcion = await prisma.funcion.findUnique({
-            where: { id: funcionId },
+        const funcion = (await prisma.funcion.findUnique({
+            where: { id: funcionId as string },
             include: { obra: true, invitados: true }
-        });
+        })) as any;
 
         if (!funcion) return res.status(404).json({ error: 'Función no encontrada' });
 

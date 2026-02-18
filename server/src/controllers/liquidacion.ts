@@ -384,8 +384,8 @@ export const listLiquidacionesGrupales = async (req: AuthRequest, res: Response)
 export const getLiquidacionGrupal = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     try {
-        const grupal = await prisma.liquidacionGrupal.findUnique({
-            where: { id },
+        const grupal = (await prisma.liquidacionGrupal.findUnique({
+            where: { id: id as string },
             include: {
                 liquidaciones: {
                     include: {
@@ -398,7 +398,7 @@ export const getLiquidacionGrupal = async (req: AuthRequest, res: Response) => {
                 },
                 items: true
             }
-        });
+        })) as any;
 
         if (!grupal) return res.status(404).json({ error: 'Group settlement not found' });
 
@@ -431,12 +431,12 @@ export const deleteLiquidacionGrupal = async (req: AuthRequest, res: Response) =
         await prisma.$transaction(async (tx) => {
             // Unlink liquidations
             await tx.liquidacion.updateMany({
-                where: { grupalId: id },
+                where: { grupalId: id as string },
                 data: { grupalId: null }
             });
             // Delete group
             await tx.liquidacionGrupal.delete({
-                where: { id }
+                where: { id: id as string }
             });
         });
         res.json({ success: true });
@@ -451,7 +451,7 @@ export const addLiquidacionGrupalItem = async (req: AuthRequest, res: Response) 
     try {
         const item = await prisma.liquidacionGrupalItem.create({
             data: {
-                grupalId,
+                grupalId: grupalId as string,
                 tipo,
                 concepto,
                 porcentaje: porcentaje !== undefined && porcentaje !== null ? Number(porcentaje) : null,
@@ -491,7 +491,7 @@ export const upsertLiquidacionGrupal = async (req: AuthRequest, res: Response) =
             }
 
             const grupal = await tx.liquidacionGrupal.update({
-                where: { id },
+                where: { id: id as string },
                 data: {
                     facturacionTotal: num(data.facturacionTotal),
                     costosVenta: num(data.costosVenta),
