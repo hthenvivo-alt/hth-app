@@ -85,17 +85,30 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     doc.text('GASTOS Y COSTOS OPERATIVOS', 15, y);
     y += 5;
 
-    const isRevenueOnlyHeader = liqData.repartos.length > 0 && !liqData.repartos.some((r: any) => r.base === 'Utilidad');
-    const totalRepartoArtistasHeader = liqData.repartos.reduce((acc: number, r: any) => acc + (Number(r.monto) || 0), 0);
+    // FILTERS
+    const revenueBasedPayouts = liqData.repartos.filter((r: any) => r.base === 'Bruta' || r.base === 'Neta');
+    const utilityBasedPayouts = liqData.repartos.filter((r: any) => r.base === 'Utilidad');
+
+    const totalRevenuePayouts = revenueBasedPayouts.reduce((acc: number, r: any) => acc + (Number(r.monto) || 0), 0);
+    const totalUtilityPayouts = utilityBasedPayouts.reduce((acc: number, r: any) => acc + (Number(r.monto) || 0), 0);
+
+    const totalGastosOperativos = liqData.items.filter((i: any) => i.tipo === 'Gasto').reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
+    const totalImpuestos = Number(liqData.impuestoTransferencias) || 0;
+
+    // Total Expenses for Section 3 (Excludes Utility Payouts)
+    const totalSection3 = totalGastosOperativos + totalImpuestos + totalRevenuePayouts;
+
+    // Operating Result (Before Utility Share)
+    const resultadoOperativo = Number(liqData.resultadoCompania) - totalSection3;
 
     autoTable(doc, {
         startY: y,
         head: [['Detalle del Gasto', 'Importe']],
         body: [
             ...liqData.items.filter((i: any) => i.tipo === 'Gasto').map((i: any) => [i.concepto, `- ${fmt(i.monto)}`]),
-            ...(isRevenueOnlyHeader ? [['Porcentaje Artistas (Bruta/Neta)', `- ${fmt(totalRepartoArtistasHeader)}`]] : []),
+            ...(totalRevenuePayouts > 0 ? [['Reparto Artistas (Sobre Bruta/Neta)', `- ${fmt(totalRevenuePayouts)}`]] : []),
             ['Impuesto Transferencias', `- ${fmt(liqData.impuestoTransferencias)}`],
-            [{ content: 'TOTAL GASTOS Y CARGAS', styles: { fontStyle: 'bold' } }, { content: fmt(Number(liqData.resultadoCompania) - Number(liqData.resultadoFuncion)), styles: { fontStyle: 'bold' } }],
+            [{ content: 'TOTAL GASTOS OPERATIVOS', styles: { fontStyle: 'bold' } }, { content: fmt(totalSection3), styles: { fontStyle: 'bold' } }],
         ],
         theme: 'striped',
         headStyles: { fillColor: dark as any },
@@ -106,35 +119,37 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
 
     y = (doc as any).lastAutoTable.finalY + 15;
 
-    // PAGE BREAK CHECK: If there is less than 100 units left, move to next page
+    // PAGE BREAK CHECK
     if (y > 200) {
         doc.addPage();
         y = 20;
     }
 
-    // SECTION 4: RESULTADO FINAL (REMARCADO)
+    // SECTION 4: RESULTADO FINAL (Simplified)
+    const boxHeight = 45;
     doc.setFillColor(dark[0], dark[1], dark[2]);
-    doc.rect(15, y, 180, 50, 'F');
-
-    const totalGastos = Number(liqData.resultadoCompania) - Number(liqData.resultadoFuncion);
+    doc.rect(15, y, 180, boxHeight, 'F');
 
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11); // Increased from 9
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Resultado Compañía: ${fmt(liqData.resultadoCompania)}`, 25, y + 12);
-    doc.text(`Gastos y Cargas: - ${fmt(totalGastos)}`, 25, y + 19);
 
+    let lineY = y + 12;
+    doc.text(`Ingreso Compañía: ${fmt(liqData.resultadoCompania)}`, 25, lineY);
+    lineY += 7;
+    doc.text(`Total Gastos: - ${fmt(totalSection3)}`, 25, lineY);
+    lineY += 7;
+
+    // Draw line
     doc.setDrawColor(255, 255, 255);
     doc.setLineWidth(0.3);
-    doc.line(25, y + 23, 100, y + 23);
+    doc.line(25, lineY - 3, 100, lineY - 3);
 
-    doc.setFontSize(12); // Increased from 10
     doc.setFont('helvetica', 'bold');
-    doc.text('RESULTADO FINAL', 25, y + 32);
-    doc.setFontSize(22); // Increased from 20
-    doc.text(fmt(liqData.resultadoFuncion), 25, y + 43);
+    doc.setFontSize(14);
+    doc.text(`UTILIDAD: ${fmt(resultadoOperativo)}`, 25, lineY + 2);
 
-    y += 60;
+    y += 55;
 
     // SECTION 5: REPARTO RESUMIDO
     doc.setTextColor(0, 0, 0);
@@ -143,13 +158,28 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     doc.text(isRevenueOnly ? 'PORCENTAJE ARTISTAS' : 'RESUMEN DE REPARTO', 15, y);
     y += 8;
 
+    // Calculate HTH Share %
+    // If we have utility payouts, HTH share is the remainder of 100 - sum(payouts)
+    // If we have revenue payouts only, HTH gets the "result" which is effectively 100% of the untaxed profit (or whatever is left)
+
+    let hthLabel = '';
+    if (isRevenueOnly) {
+        hthLabel = '100% (Remanente)';
+    } else {
+        const totalUtilityPercent = liqData.repartos
+            .filter((r: any) => r.base === 'Utilidad')
+            .reduce((acc: number, r: any) => acc + (Number(r.porcentaje) || 0), 0);
+        const hthPercent = Math.max(0, 100 - totalUtilityPercent);
+        hthLabel = `${hthPercent}% s/ Utilidad`;
+    }
+
     const repartoRows = [
         ...liqData.repartos.map((r: any) => [
             r.nombreArtista.toUpperCase(),
             `${r.porcentaje}% s/ ${r.base}${r.aplicaAAA ? ' (+ AAA)' : ''}`,
             { content: fmt(r.monto), styles: { fontStyle: 'bold' } }
         ]),
-        ['HTH GESTIÓN / PRODUCCIÓN', isRevenueOnly ? '(Remanente)' : '(Remanente Utilidad)', { content: fmt(liqData.repartoProduccionMonto), styles: { fontStyle: 'bold' } }]
+        ['HTH GESTIÓN / PRODUCCIÓN', hthLabel, { content: fmt(liqData.repartoProduccionMonto), styles: { fontStyle: 'bold' } }]
     ];
 
     autoTable(doc, {

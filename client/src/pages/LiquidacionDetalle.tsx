@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
-// import { generateLiquidacionPDF } from '../utils/pdfGenerator';
+import { generateLiquidacionPDF } from '../utils/pdfGenerator';
 import {
     ChevronLeft,
     Save,
@@ -483,6 +483,35 @@ const LiquidacionDetalle: React.FC = () => {
         }
     });
 
+    const handlePrint = () => {
+        if (!funcion) return;
+
+        const liqData = {
+            moneda,
+            tipoCambio: safeEvaluate(tipoCambio),
+            facturacionTotal: safeEvaluate(facturacionTotal),
+            vendidas: safeEvaluate(vendidas),
+            costosVenta: safeEvaluate(costosVenta),
+            recaudacionBruta,
+            recaudacionNeta,
+            acuerdoPorcentaje: safeEvaluate(acuerdoPorcentaje),
+            acuerdoSobre,
+            resultadoCompania,
+            impuestoTransferencias,
+            impuestoTransferenciaPorcentaje: safeEvaluate(impuestoTransferenciaPorcentaje),
+            resultadoFuncion,
+            repartos: calculatedRepartos,
+            repartoProduccionPorcentaje: safeEvaluate(repartoProduccionPorcentaje),
+            repartoProduccionMonto,
+            items,
+            bordereauxImage
+        };
+
+        const gastos = items.filter(i => i.tipo === 'Gasto');
+
+        generateLiquidacionPDF(funcion, liqData, gastos, comprobantes || []);
+    };
+
     if (loadingFuncion || loadingLiq) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
@@ -513,7 +542,15 @@ const LiquidacionDetalle: React.FC = () => {
                         <p className="text-gray-400">{funcion?.salaNombre} — {new Date(funcion?.fecha).toLocaleDateString()}</p>
                     </div>
                 </div>
-                {/* PDF Button placeholder - currently disabled */}
+                {/* PDF Button */}
+                <button
+                    onClick={handlePrint}
+                    className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl transition-colors font-bold text-sm border border-white/5"
+                    title="Exportar PDF"
+                >
+                    <Download size={18} />
+                    <span>Exportar PDF</span>
+                </button>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
