@@ -829,7 +829,15 @@ const LiquidacionDetalle: React.FC = () => {
 
                     {/* 5. Repartos */}
                     <div className="bg-[#1E1E1E] p-6 rounded-2xl border border-white/5">
-                        <h3 className="text-lg font-bold mb-4">{isRevenueOnly ? 'Porcentaje Artistas' : 'Reparto de Utilidades'}</h3>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-bold">{isRevenueOnly ? 'Porcentaje Artistas' : 'Reparto de Utilidades'}</h3>
+                            {!isRevenueOnly && (
+                                <div className="text-right">
+                                    <span className="block text-[10px] text-gray-500 uppercase font-bold tracking-widest">Resultado a Repartir</span>
+                                    <span className="text-2xl font-black text-white">{symbol} {rawResultadoFuncion.toLocaleString('es-AR')}</span>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="space-y-2 mb-4">
                             {calculatedRepartos.map((reparto, idx) => (
@@ -870,11 +878,17 @@ const LiquidacionDetalle: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
-                        </div>
 
-                        <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                            <span className="font-bold text-primary-400">Resultado Función</span>
-                            <span className="font-bold font-mono text-xl">{symbol} {resultadoFuncion.toLocaleString('es-AR')}</span>
+                            {/* HTH Result Visualization */}
+                            <div className="p-3 bg-white/5 rounded-xl border border-white/5 space-y-3">
+                                <div className="flex justify-between items-center text-sm">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-white uppercase tracking-tight">HTH PRODUCCIÓN / GESTIÓN</span>
+                                        <span className="text-[10px] text-gray-500 uppercase font-bold">{calcRepartoProduccionPorcentaje}% sobre Utilidad</span>
+                                    </div>
+                                    <span className="font-black text-white">{symbol} {repartoProduccionMonto.toLocaleString('es-AR')}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
