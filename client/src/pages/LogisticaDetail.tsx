@@ -155,7 +155,7 @@ const LogisticaDetail: React.FC = () => {
                                 <h4 className="font-bold text-primary-400">Notas de Producción</h4>
                                 <button
                                     onClick={() => {
-                                        const newNotes = prompt('Editar Notas de Producción:', funcion.notasProduccion || '');
+                                        const newNotes = window.prompt('Editar Notas de Producción:', funcion.notasProduccion || '');
                                         if (newNotes !== null) {
                                             api.put(`/funciones/${id}`, { notasProduccion: newNotes })
                                                 .then(() => queryClient.invalidateQueries({ queryKey: ['funcion', id] }));

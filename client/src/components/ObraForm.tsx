@@ -153,8 +153,8 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
                             <label
                                 key={user.id}
                                 className={`flex items-center space-x-3 p-3 rounded-xl border transition-all cursor-pointer ${selectedArtistas.includes(user.id)
-                                        ? 'bg-primary-500/10 border-primary-500/30 text-primary-400'
-                                        : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10'
+                                    ? 'bg-primary-500/10 border-primary-500/30 text-primary-400'
+                                    : 'bg-white/5 border-white/5 text-gray-400 hover:border-white/10'
                                     }`}
                             >
                                 <input
@@ -171,7 +171,7 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
                                 />
                                 <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedArtistas.includes(user.id) ? 'bg-primary-500 border-primary-500' : 'border-gray-600'
                                     }`}>
-                                    {selectedArtistas.includes(user.id) && <svg size={12} xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                    {selectedArtistas.includes(user.id) && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                                 </div>
                                 <span className="text-xs font-black truncate uppercase tracking-tight">{user.nombre} {user.apellido}</span>
                             </label>

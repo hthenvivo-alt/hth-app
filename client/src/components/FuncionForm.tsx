@@ -259,7 +259,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                         placeholder="Ej: CABA"
                     />
                     <datalist id="funcion-cities-list">
-                        {uniqueCities.map(city => <option key={city} value={city} />)}
+                        {uniqueCities.map(city => <option key={city as string} value={city as string} />)}
                     </datalist>
                 </div>
 
@@ -277,7 +277,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                     <datalist id="funcion-salas-list">
                         {(formData.ciudad && citySalaMap[formData.ciudad])
                             ? Array.from(citySalaMap[formData.ciudad]).map((sala: any) => <option key={sala} value={sala} />)
-                            : uniqueSalas.map(sala => <option key={sala} value={sala} />)
+                            : uniqueSalas.map(sala => <option key={sala as string} value={sala as string} />)
                         }
                     </datalist>
                 </div>
