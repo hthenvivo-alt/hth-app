@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String           @id @default(uuid())
+  email                String           @unique
+  passwordHash         String?
+  rol                  String
+  nombre               String
+  apellido             String
+  telefono             String?
+  googleAccessToken    String?
+  googleRefreshToken   String?
+  googleTokenExpiry    DateTime?
+  activo               Boolean          @default(true)
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+  resetPasswordExpires DateTime?
+  resetPasswordToken   String?
+  tareas               ChecklistTarea[]
+  documentos           Documento[]
+  funciones            Funcion[]        @relation("ProductorAsociado")
+  mensajes             Mensaje[]
+  obras                Obra[]           @relation("ProductorEjecutivo")
+  obrasComoArtista     Obra[]           @relation("ArtistasEnObras")
+}
+
+model Obra {
+  id                   String           @id @default(uuid())
+  nombre               String
+  artistaPrincipal     String
+  descripcion          String?
+  estado               String
+  fechaEstreno         DateTime?
+  productorEjecutivoId String
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+  driveFolderId        String?
+  artistaPayouts       ArtistaPayout[]
+  checklists           ChecklistTarea[]
+  documentos           Documento[]
+  funciones            Funcion[]
+  gastos               Gasto[]
+  productorEjecutivo   User             @relation("ProductorEjecutivo", fields: [productorEjecutivoId], references: [id], onDelete: Cascade)
+  artistas             User[]           @relation("ArtistasEnObras")
+}
+
+model ArtistaPayout {
+  id         String   @id @default(uuid())
+  obraId     String
+  nombre     String
+  porcentaje Decimal  @db.Decimal(5, 2)
+  base       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  obra       Obra     @relation(fields: [obraId], references: [id], onDelete: Cascade)
+}
+
+model Funcion {
+  id                        String           @id @default(uuid())
+  obraId                    String
+  fecha                     DateTime
+  salaNombre                String
+  salaDireccion             String?
+  ciudad                    String
+  pais                      String           @default("Argentina")
+  capacidadSala             Int?
+  precioEntradaBase         Decimal?         @db.Decimal(10, 2)
+  linkVentaTicketera        String?
+  linkMonitoreoVenta        String?
+  notasProduccion           String?
+  productorAsociadoId       String?
+  created_at                DateTime         @default(now())
+  updated_at                DateTime         @updatedAt
+  passVentaTicketera        String?
+  ultimaActualizacionVentas DateTime?
+  ultimaFacturacionBruta    Decimal?         @db.Decimal(15, 2)
+  userVentaTicketera        String?
+  vendidas                  Int              @default(0)
+  checklists                ChecklistTarea[]
+  documentos                Documento[]
+  obra                      Obra             @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  productorAsociado         User?            @relation("ProductorAsociado", fields: [productorAsociadoId], references: [id])
+  gastos                    Gasto[]
+  invitados                 Invitado[]
+  liquidacion               Liquidacion?
+  logistica                 LogisticaRuta?
+  ventas                    Venta[]
+}
+
+model Invitado {
+  id         String   @id @default(uuid())
+  funcionId  String
+  nombre     String
+  cantidad   Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  funcion    Funcion  @relation(fields: [funcionId], references: [id], onDelete: Cascade)
+}
+
+model LogisticaRuta {
+  id                              String    @id @default(uuid())
+  funcionId                       String    @unique
+  comidasDetalle                  String?
+  contactosLocales                String?
+  telProductorEjecutivo           String?
+  telProductorAsociado            String?
+  telTraslados                    String?
+  telHoteles                      String?
+  fechaEnvioRuta                  DateTime?
+  created_at                      DateTime  @default(now())
+  updated_at                      DateTime  @updatedAt
+  alojamientoNoAplicaArtista      Boolean   @default(false)
+  alojamientoNoAplicaProduccion   Boolean   @default(false)
+  detalleTrasladoIdaArtista       String?
+  detalleTrasladoIdaProduccion    String?
+  detalleTrasladoVueltaArtista    String?
+  detalleTrasladoVueltaProduccion String?
+  horarioCitacionArtista          String?
+  horarioEntradaSala              String?
+  hotelDireccionArtista           String?
+  hotelDireccionProduccion        String?
+  hotelNombreArtista              String?
+  hotelNombreProduccion           String?
+  linkFlyersRedes                 String?
+  linkGraficaTicketera            String?
+  tipoTrasladoIdaArtista          String?
+  tipoTrasladoIdaProduccion       String?
+  tipoTrasladoVueltaArtista       String?
+  tipoTrasladoVueltaProduccion    String?
+  funcion                         Funcion   @relation(fields: [funcionId], references: [id], onDelete: Cascade)
+}
+
+model ChecklistTarea {
+  id               String    @id @default(uuid())
+  obraId           String
+  funcionId        String?
+  descripcionTarea String
+  responsableId    String
+  fechaLimite      DateTime?
+  completada       Boolean   @default(false)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  observaciones    String?
+  funcion          Funcion?  @relation(fields: [funcionId], references: [id], onDelete: Cascade)
+  obra             Obra      @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  responsable      User      @relation(fields: [responsableId], references: [id])
+}
+
+model Documento {
+  id              String       @id @default(uuid())
+  obraId          String?
+  funcionId       String?
+  nombreDocumento String
+  driveFileId     String
+  linkDrive       String
+  tipoDocumento   String
+  subidoPorId     String
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  liquidacionId   String?
+  funcion         Funcion?     @relation(fields: [funcionId], references: [id], onDelete: Cascade)
+  liquidacion     Liquidacion? @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+  obra            Obra?        @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  subidoPor       User         @relation(fields: [subidoPorId], references: [id])
+  gastos          Gasto[]
+}
+
+model Venta {
+  id               String   @id @default(uuid())
+  funcionId        String
+  fechaRegistro    DateTime @default(now())
+  tipoVenta        String
+  entradasVendidas Int
+  facturacionBruta Decimal? @db.Decimal(15, 2)
+  canalVenta       String?
+  created_at       DateTime @default(now())
+  funcion          Funcion  @relation(fields: [funcionId], references: [id], onDelete: Cascade)
+}
+
+model Gasto {
+  id                     String     @id @default(uuid())
+  obraId                 String?
+  funcionId              String?
+  descripcion            String
+  monto                  Decimal    @db.Decimal(15, 2)
+  tipoGasto              String
+  comprobanteDocumentoId String?
+  fechaGasto             DateTime
+  created_at             DateTime   @default(now())
+  updated_at             DateTime   @updatedAt
+  comprobanteDocumento   Documento? @relation(fields: [comprobanteDocumentoId], references: [id])
+  funcion                Funcion?   @relation(fields: [funcionId], references: [id], onDelete: Cascade)
+  obra                   Obra?      @relation(fields: [obraId], references: [id], onDelete: Cascade)
+}
+
+model Mensaje {
+  id         String   @id @default(uuid())
+  contenido  String
+  autorId    String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  autor      User     @relation(fields: [autorId], references: [id])
+}
+
+model Liquidacion {
+  id                              String               @id @default(uuid())
+  funcionId                       String               @unique
+  facturacionTotal                Decimal              @db.Decimal(15, 2)
+  costosVenta                     Decimal              @db.Decimal(15, 2)
+  recaudacionBruta                Decimal              @db.Decimal(15, 2)
+  recaudacionNeta                 Decimal              @db.Decimal(15, 2)
+  acuerdoPorcentaje               Decimal              @db.Decimal(5, 2)
+  acuerdoSobre                    String
+  resultadoCompania               Decimal              @db.Decimal(15, 2)
+  impuestoTransferencias          Decimal              @db.Decimal(15, 2)
+  impuestoTransferenciaPorcentaje Decimal              @default(1.2) @db.Decimal(5, 2)
+  resultadoFuncion                Decimal              @db.Decimal(15, 2)
+  repartoArtistaPorcentaje        Decimal?             @db.Decimal(5, 2)
+  repartoProduccionPorcentaje     Decimal?             @db.Decimal(5, 2)
+  repartoArtistaMonto             Decimal?             @db.Decimal(15, 2)
+  repartoProduccionMonto          Decimal?             @db.Decimal(15, 2)
+  moneda                          String               @default("ARS")
+  tipoCambio                      Decimal              @default(1.0) @db.Decimal(10, 4)
+  bordereauxImage                 String?
+  confirmada                      Boolean              @default(false)
+  fechaConfirmacion               DateTime?
+  created_at                      DateTime             @default(now())
+  updated_at                      DateTime             @updatedAt
+  grupalId                        String?
+  comprobantes                    Documento[]
+  funcion                         Funcion              @relation(fields: [funcionId], references: [id], onDelete: Cascade)
+  grupal                          LiquidacionGrupal?   @relation(fields: [grupalId], references: [id])
+  items                           LiquidacionItem[]
+  repartos                        LiquidacionReparto[]
+}
+
+model LiquidacionGrupal {
+  id                              String                  @id @default(uuid())
+  nombre                          String
+  facturacionTotal                Decimal                 @default(0) @db.Decimal(15, 2)
+  costosVenta                     Decimal                 @default(0) @db.Decimal(15, 2)
+  costosVentaPorcentaje           Decimal?                @db.Decimal(5, 2)
+  recaudacionBruta                Decimal                 @default(0) @db.Decimal(15, 2)
+  recaudacionNeta                 Decimal                 @default(0) @db.Decimal(15, 2)
+  acuerdoPorcentaje               Decimal                 @default(0) @db.Decimal(5, 2)
+  acuerdoSobre                    String                  @default("Neta")
+  impuestoTransferenciaPorcentaje Decimal                 @default(1.2) @db.Decimal(5, 2)
+  moneda                          String                  @default("ARS")
+  tipoCambio                      Decimal                 @default(1.0) @db.Decimal(10, 4)
+  confirmada                      Boolean                 @default(false)
+  created_at                      DateTime                @default(now())
+  updated_at                      DateTime                @updatedAt
+  liquidaciones                   Liquidacion[]
+  items                           LiquidacionGrupalItem[]
+}
+
+model LiquidacionGrupalItem {
+  id         String            @id @default(uuid())
+  grupalId   String
+  tipo       String
+  concepto   String
+  porcentaje Decimal?          @db.Decimal(5, 2)
+  monto      Decimal           @db.Decimal(15, 2)
+  grupal     LiquidacionGrupal @relation(fields: [grupalId], references: [id], onDelete: Cascade)
+}
+
+model LiquidacionItem {
+  id            String      @id @default(uuid())
+  liquidacionId String
+  tipo          String
+  concepto      String
+  porcentaje    Decimal?    @db.Decimal(5, 2)
+  monto         Decimal     @db.Decimal(15, 2)
+  liquidacion   Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+}
+
+model LiquidacionReparto {
+  id            String      @id @default(uuid())
+  liquidacionId String
+  nombreArtista String
+  porcentaje    Decimal     @db.Decimal(5, 2)
+  base          String
+  monto         Decimal     @db.Decimal(15, 2)
+  retencionAAA  Decimal?    @db.Decimal(15, 2)
+  created_at    DateTime    @default(now())
+  aplicaAAA     Boolean     @default(true)
+  liquidacion   Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+}

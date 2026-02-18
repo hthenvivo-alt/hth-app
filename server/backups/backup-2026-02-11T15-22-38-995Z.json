@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "timestamp": "2026-02-11T15:22:39.534Z",
+    "version": "1.0"
+  },
+  "data": {
+    "users": [],
+    "obras": [],
+    "funciones": [],
+    "logisticaRutas": [],
+    "checklists": [],
+    "documentos": [],
+    "liquidaciones": [],
+    "ventas": [],
+    "gastos": [],
+    "mensajes": []
+  }
+}

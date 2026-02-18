@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "timestamp": "2026-02-09T16:39:42.072Z",
+    "version": "1.0"
+  },
+  "data": {
+    "users": [
+      {
+        "id": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "email": "admin@hth.com",
+        "passwordHash": "$2b$10$ZvA9dfXMmBM6JBF.NemfxuOCeEIUiJhPPKgGj2X9/lTbccoZSx4Z2",
+        "rol": "Admin",
+        "nombre": "Admin",
+        "apellido": "HTH",
+        "telefono": null,
+        "googleAccessToken": "ya29.a0AUMWg_LPLJsMNyFCLg6D5YHKX7OuZobOdRvCXrJPTQFZzQNGYJVlKmWmWfaWVwwcA3OPv3GRutP9Eu8gxAOOgHVvhzoxrk5Z-nkZK7xWtXzOMXMUnmeYlOYiB-rohkYIRwonDF4R6TBmgVBhI3t6_FesMwZAw9kt2X1LS72pUoRREF1agCatYMSLar9D9YbJ38_BgboaCgYKASMSARUSFQHGX2MiFa8yzKIbgw9_ydNIDwiNiA0206",
+        "googleRefreshToken": "1//0h6Nk5lOUq-nVCgYIARAAGBESNwF-L9IrbpPPWZmr2vrAnGvCVOfQs5R6FLRxwec1HheUhYlYZzvmJ7Ae9XtGVwkpA7GFspg6BMA",
+        "googleTokenExpiry": "2026-02-09T17:30:12.022Z",
+        "activo": true,
+        "created_at": "2026-02-09T16:08:46.211Z",
+        "updated_at": "2026-02-09T16:30:13.023Z"
+      }
+    ],
+    "obras": [
+      {
+        "id": "25de8bb3-f9fa-4367-802b-af4752903a86",
+        "nombre": "Hamlet",
+        "artistaPrincipal": "Compañía Shakespeare",
+        "descripcion": "Clásico de Shakespeare en adaptación moderna.",
+        "estado": "En Gira",
+        "fechaEstreno": null,
+        "productorEjecutivoId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "created_at": "2026-02-09T16:18:18.518Z",
+        "updated_at": "2026-02-09T16:18:18.518Z"
+      },
+      {
+        "id": "e10fccfe-b6b7-4805-8a36-2ee12b2e0f1a",
+        "nombre": "El Cascanueces",
+        "artistaPrincipal": "Ballet Nacional",
+        "descripcion": "Ballet clásico de Navidad.",
+        "estado": "En Gira",
+        "fechaEstreno": null,
+        "productorEjecutivoId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "created_at": "2026-02-09T16:18:18.538Z",
+        "updated_at": "2026-02-09T16:18:18.538Z"
+      }
+    ],
+    "funciones": [
+      {
+        "id": "74c7e8f6-d30b-4bae-955b-cc1203496656",
+        "obraId": "25de8bb3-f9fa-4367-802b-af4752903a86",
+        "fecha": "2026-02-04T16:18:18.543Z",
+        "salaNombre": "Teatro Colón",
+        "salaDireccion": null,
+        "ciudad": "Buenos Aires",
+        "pais": "Argentina",
+        "capacidadSala": 2500,
+        "precioEntradaBase": "15000",
+        "linkVentaTicketera": null,
+        "userVentaTicketera": null,
+        "passVentaTicketera": null,
+        "linkMonitoreoVenta": null,
+        "notasProduccion": null,
+        "productorAsociadoId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "vendidas": 2000,
+        "ultimaFacturacionBruta": "30000000",
+        "ultimaActualizacionVentas": null,
+        "created_at": "2026-02-09T16:18:18.546Z",
+        "updated_at": "2026-02-09T16:18:18.546Z"
+      },
+      {
+        "id": "68a35911-4018-4fe2-859e-dbc265dfb948",
+        "obraId": "e10fccfe-b6b7-4805-8a36-2ee12b2e0f1a",
+        "fecha": "2026-02-19T16:18:18.562Z",
+        "salaNombre": "Teatro Gran Rex",
+        "salaDireccion": null,
+        "ciudad": "Buenos Aires",
+        "pais": "Argentina",
+        "capacidadSala": 3200,
+        "precioEntradaBase": "12000",
+        "linkVentaTicketera": null,
+        "userVentaTicketera": null,
+        "passVentaTicketera": null,
+        "linkMonitoreoVenta": null,
+        "notasProduccion": null,
+        "productorAsociadoId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "vendidas": 500,
+        "ultimaFacturacionBruta": null,
+        "ultimaActualizacionVentas": null,
+        "created_at": "2026-02-09T16:18:18.565Z",
+        "updated_at": "2026-02-09T16:18:18.565Z"
+      },
+      {
+        "id": "f58f38d5-0ae7-4d04-ad5f-3c2dbcc7ae65",
+        "obraId": "25de8bb3-f9fa-4367-802b-af4752903a86",
+        "fecha": "2026-02-07T16:18:18.573Z",
+        "salaNombre": "Teatro Municipal",
+        "salaDireccion": null,
+        "ciudad": "Rosario",
+        "pais": "Argentina",
+        "capacidadSala": 1000,
+        "precioEntradaBase": "10000",
+        "linkVentaTicketera": null,
+        "userVentaTicketera": null,
+        "passVentaTicketera": null,
+        "linkMonitoreoVenta": null,
+        "notasProduccion": null,
+        "productorAsociadoId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "vendidas": 800,
+        "ultimaFacturacionBruta": "8000000",
+        "ultimaActualizacionVentas": null,
+        "created_at": "2026-02-09T16:18:18.575Z",
+        "updated_at": "2026-02-09T16:18:18.575Z"
+      }
+    ],
+    "logisticaRutas": [],
+    "checklists": [],
+    "documentos": [],
+    "liquidaciones": [
+      {
+        "id": "01dd9ea0-3500-40e4-9736-a9bb395c2352",
+        "funcionId": "74c7e8f6-d30b-4bae-955b-cc1203496656",
+        "facturacionTotal": "30000000",
+        "costosVenta": "1000000",
+        "recaudacionBruta": "29000000",
+        "recaudacionNeta": "28500000",
+        "acuerdoPorcentaje": "0",
+        "acuerdoSobre": "Neta",
+        "resultadoCompania": "28500000",
+        "impuestoTransferencias": "342000",
+        "impuestoTransferenciaPorcentaje": "1.2",
+        "resultadoFuncion": "28000000",
+        "repartoArtistaPorcentaje": "70",
+        "repartoProduccionPorcentaje": "30",
+        "repartoArtistaMonto": "19600000",
+        "repartoProduccionMonto": "8400000",
+        "moneda": "ARS",
+        "tipoCambio": "1",
+        "bordereauxImage": null,
+        "confirmada": true,
+        "fechaConfirmacion": "2026-02-09T16:18:18.584Z",
+        "created_at": "2026-02-09T16:18:18.586Z",
+        "updated_at": "2026-02-09T16:18:18.586Z",
+        "items": [
+          {
+            "id": "548dff85-87ed-4372-937b-6bf4aa3095d2",
+            "liquidacionId": "01dd9ea0-3500-40e4-9736-a9bb395c2352",
+            "tipo": "Deduccion",
+            "concepto": "Argentores",
+            "porcentaje": "1",
+            "monto": "290000"
+          },
+          {
+            "id": "a01f2196-f66d-4494-894e-1f75ed95de67",
+            "liquidacionId": "01dd9ea0-3500-40e4-9736-a9bb395c2352",
+            "tipo": "Gasto",
+            "concepto": "Hotel Elenco",
+            "porcentaje": null,
+            "monto": "158000"
+          },
+          {
+            "id": "e25215b8-e2df-404f-bbdc-68f7c7cebe3b",
+            "liquidacionId": "01dd9ea0-3500-40e4-9736-a9bb395c2352",
+            "tipo": "Gasto",
+            "concepto": "Catering",
+            "porcentaje": null,
+            "monto": "50000"
+          }
+        ]
+      }
+    ],
+    "ventas": [],
+    "gastos": [],
+    "mensajes": []
+  }
+}

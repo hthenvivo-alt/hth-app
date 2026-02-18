@@ -1,0 +1,430 @@
+{
+  "meta": {
+    "timestamp": "2026-02-09T20:11:30.714Z",
+    "version": "1.0"
+  },
+  "data": {
+    "users": [
+      {
+        "id": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "email": "admin@hth.com",
+        "passwordHash": "$2b$10$ZvA9dfXMmBM6JBF.NemfxuOCeEIUiJhPPKgGj2X9/lTbccoZSx4Z2",
+        "rol": "Admin",
+        "nombre": "Admin",
+        "apellido": "HTH",
+        "telefono": null,
+        "googleAccessToken": "ya29.a0AUMWg_Lkr4nVDx65VKbzJdC5I_U4YS7QsyH-cfSysm8n4eJUig0UKM9xpAwuqpNSrKeUvZbpg9y9K99CjZC5MXEL0iLrrFz_-IQWT8DMgKkYxd467de2QMbHlL9QsmIoDlMGLz01BygWIGa6eXUfT1Y_NoU_m2U2DHAGeuJaDHytRX2WBST6anmhlV2T7r0kdFyBRMgaCgYKAbASARUSFQHGX2MiP3GIAzRcWM7DMx3SYqYQQw0206",
+        "googleRefreshToken": "1//0h6Nk5lOUq-nVCgYIARAAGBESNwF-L9IrbpPPWZmr2vrAnGvCVOfQs5R6FLRxwec1HheUhYlYZzvmJ7Ae9XtGVwkpA7GFspg6BMA",
+        "googleTokenExpiry": "2026-02-09T20:22:31.897Z",
+        "activo": true,
+        "created_at": "2026-02-09T16:08:46.211Z",
+        "updated_at": "2026-02-09T19:22:32.903Z"
+      }
+    ],
+    "obras": [
+      {
+        "id": "b4e09add-8efe-4145-8142-e40771e8e932",
+        "nombre": "QUEMADO",
+        "artistaPrincipal": "FERNANDO SANJIAO",
+        "descripcion": "",
+        "estado": "En Gira",
+        "fechaEstreno": "2025-01-20T00:00:00.000Z",
+        "productorEjecutivoId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "created_at": "2026-02-09T16:56:47.603Z",
+        "updated_at": "2026-02-09T16:56:47.603Z"
+      }
+    ],
+    "funciones": [
+      {
+        "id": "ba492816-ab96-4fc8-a8ee-bb7bd310ebe3",
+        "obraId": "b4e09add-8efe-4145-8142-e40771e8e932",
+        "fecha": "2026-01-24T00:00:00.000Z",
+        "salaNombre": "LA TANGENTE",
+        "salaDireccion": "",
+        "ciudad": "CABA",
+        "pais": "Argentina",
+        "capacidadSala": 130,
+        "precioEntradaBase": null,
+        "linkVentaTicketera": "",
+        "userVentaTicketera": "",
+        "passVentaTicketera": "",
+        "linkMonitoreoVenta": "",
+        "notasProduccion": "",
+        "productorAsociadoId": null,
+        "vendidas": 101,
+        "ultimaFacturacionBruta": "2525000",
+        "ultimaActualizacionVentas": "2026-02-09T18:22:27.309Z",
+        "created_at": "2026-02-09T17:01:26.237Z",
+        "updated_at": "2026-02-09T18:22:27.317Z"
+      },
+      {
+        "id": "ecc10f7f-0e27-4405-904d-f3d297e7aeaf",
+        "obraId": "b4e09add-8efe-4145-8142-e40771e8e932",
+        "fecha": "2026-02-21T23:45:00.000Z",
+        "salaNombre": "CAFÉ BERLIN, CABA",
+        "salaDireccion": null,
+        "ciudad": "CAFÉ BERLIN",
+        "pais": "Argentina",
+        "capacidadSala": null,
+        "precioEntradaBase": null,
+        "linkVentaTicketera": null,
+        "userVentaTicketera": null,
+        "passVentaTicketera": null,
+        "linkMonitoreoVenta": null,
+        "notasProduccion": "",
+        "productorAsociadoId": null,
+        "vendidas": 0,
+        "ultimaFacturacionBruta": null,
+        "ultimaActualizacionVentas": null,
+        "created_at": "2026-02-09T19:27:05.526Z",
+        "updated_at": "2026-02-09T19:27:05.526Z"
+      },
+      {
+        "id": "bdeeb35e-f4e8-4bdd-b023-516f776c9c2b",
+        "obraId": "b4e09add-8efe-4145-8142-e40771e8e932",
+        "fecha": "2026-03-08T00:00:00.000Z",
+        "salaNombre": "MELANY, MAR DEL PLATA",
+        "salaDireccion": null,
+        "ciudad": "MELANY",
+        "pais": "Argentina",
+        "capacidadSala": null,
+        "precioEntradaBase": null,
+        "linkVentaTicketera": null,
+        "userVentaTicketera": null,
+        "passVentaTicketera": null,
+        "linkMonitoreoVenta": null,
+        "notasProduccion": "",
+        "productorAsociadoId": null,
+        "vendidas": 0,
+        "ultimaFacturacionBruta": null,
+        "ultimaActualizacionVentas": null,
+        "created_at": "2026-02-09T19:27:05.547Z",
+        "updated_at": "2026-02-09T19:27:05.547Z"
+      },
+      {
+        "id": "af58c906-c050-4cf3-a0ed-5e990d272cb8",
+        "obraId": "b4e09add-8efe-4145-8142-e40771e8e932",
+        "fecha": "2026-01-31T00:00:00.000Z",
+        "salaNombre": "LA TANGENTE",
+        "salaDireccion": "",
+        "ciudad": "CABA",
+        "pais": "Argentina",
+        "capacidadSala": 130,
+        "precioEntradaBase": null,
+        "linkVentaTicketera": "",
+        "userVentaTicketera": "",
+        "passVentaTicketera": "",
+        "linkMonitoreoVenta": "",
+        "notasProduccion": "",
+        "productorAsociadoId": null,
+        "vendidas": 77,
+        "ultimaFacturacionBruta": "1925000",
+        "ultimaActualizacionVentas": "2026-02-09T19:28:16.775Z",
+        "created_at": "2026-02-09T19:22:30.242Z",
+        "updated_at": "2026-02-09T19:28:16.777Z"
+      },
+      {
+        "id": "6f73338f-e6de-491f-9ce6-44882bd9e421",
+        "obraId": "b4e09add-8efe-4145-8142-e40771e8e932",
+        "fecha": "2026-02-07T00:00:00.000Z",
+        "salaNombre": "CAFE BERLIN",
+        "salaDireccion": "",
+        "ciudad": "CABA",
+        "pais": "Argentina",
+        "capacidadSala": 150,
+        "precioEntradaBase": null,
+        "linkVentaTicketera": "",
+        "userVentaTicketera": "",
+        "passVentaTicketera": "",
+        "linkMonitoreoVenta": "",
+        "notasProduccion": "",
+        "productorAsociadoId": null,
+        "vendidas": 138,
+        "ultimaFacturacionBruta": "3940000",
+        "ultimaActualizacionVentas": "2026-02-09T20:05:08.013Z",
+        "created_at": "2026-02-09T20:00:17.196Z",
+        "updated_at": "2026-02-09T20:05:08.015Z"
+      }
+    ],
+    "logisticaRutas": [
+      {
+        "id": "b4d33d2d-a8d5-4a45-baf9-1419f285698e",
+        "funcionId": "ba492816-ab96-4fc8-a8ee-bb7bd310ebe3",
+        "tipoTrasladoIdaArtista": "",
+        "detalleTrasladoIdaArtista": "",
+        "tipoTrasladoVueltaArtista": "",
+        "detalleTrasladoVueltaArtista": "",
+        "tipoTrasladoIdaProduccion": "",
+        "detalleTrasladoIdaProduccion": "",
+        "tipoTrasladoVueltaProduccion": "",
+        "detalleTrasladoVueltaProduccion": "",
+        "hotelNombreArtista": "",
+        "hotelDireccionArtista": "",
+        "alojamientoNoAplicaArtista": false,
+        "hotelNombreProduccion": "",
+        "hotelDireccionProduccion": "",
+        "alojamientoNoAplicaProduccion": false,
+        "linkGraficaTicketera": null,
+        "linkFlyersRedes": null,
+        "horarioEntradaSala": "",
+        "horarioCitacionArtista": "",
+        "comidasDetalle": "",
+        "contactosLocales": "",
+        "telProductorEjecutivo": "",
+        "telProductorAsociado": "",
+        "telTraslados": "",
+        "telHoteles": "",
+        "fechaEnvioRuta": null,
+        "created_at": "2026-02-09T18:58:57.304Z",
+        "updated_at": "2026-02-09T18:58:57.304Z"
+      }
+    ],
+    "checklists": [],
+    "documentos": [
+      {
+        "id": "b162ad93-a082-4ede-82ea-3db6a5a9890d",
+        "obraId": null,
+        "funcionId": "ba492816-ab96-4fc8-a8ee-bb7bd310ebe3",
+        "liquidacionId": null,
+        "nombreDocumento": "Viernes CABA - Feed.png",
+        "driveFileId": "local",
+        "linkDrive": "/uploads/comprobantes/comprobante-1770663124111-921674553.png",
+        "tipoDocumento": "Comprobante",
+        "subidoPorId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "created_at": "2026-02-09T18:52:04.215Z",
+        "updated_at": "2026-02-09T18:52:04.215Z"
+      },
+      {
+        "id": "b7111a03-c24d-4388-9ef7-5aabed17f44d",
+        "obraId": null,
+        "funcionId": "ba492816-ab96-4fc8-a8ee-bb7bd310ebe3",
+        "liquidacionId": null,
+        "nombreDocumento": "25 DE MAYO.jpg",
+        "driveFileId": "local",
+        "linkDrive": "/uploads/comprobantes/comprobante-1770663135619-758461650.jpg",
+        "tipoDocumento": "Comprobante",
+        "subidoPorId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "created_at": "2026-02-09T18:52:15.655Z",
+        "updated_at": "2026-02-09T18:52:15.655Z"
+      },
+      {
+        "id": "280555b5-72cd-489b-9f18-3b7eb55f6d1b",
+        "obraId": null,
+        "funcionId": null,
+        "liquidacionId": "8b9337bc-63dd-44ab-a2d3-f7f5eb11a374",
+        "nombreDocumento": "WhatsApp Image 2026-02-09 at 16.18.41.jpeg",
+        "driveFileId": "local",
+        "linkDrive": "/uploads/comprobantes/comprobante-1770664761524-787408276.jpeg",
+        "tipoDocumento": "Comprobante",
+        "subidoPorId": "b154600a-7efb-40a2-8eb4-2e41790647f9",
+        "created_at": "2026-02-09T19:19:21.551Z",
+        "updated_at": "2026-02-09T19:19:21.551Z"
+      }
+    ],
+    "liquidaciones": [
+      {
+        "id": "8b9337bc-63dd-44ab-a2d3-f7f5eb11a374",
+        "funcionId": "ba492816-ab96-4fc8-a8ee-bb7bd310ebe3",
+        "facturacionTotal": "2525000",
+        "costosVenta": "0",
+        "recaudacionBruta": "2525000",
+        "recaudacionNeta": "2272500",
+        "acuerdoPorcentaje": "20",
+        "acuerdoSobre": "Neta",
+        "resultadoCompania": "1818000",
+        "impuestoTransferencias": "21816",
+        "impuestoTransferenciaPorcentaje": "1.2",
+        "resultadoFuncion": "1687340",
+        "repartoArtistaPorcentaje": "70",
+        "repartoProduccionPorcentaje": "30",
+        "repartoArtistaMonto": "1181138",
+        "repartoProduccionMonto": "506202",
+        "moneda": "ARS",
+        "tipoCambio": "1",
+        "bordereauxImage": "/uploads/bordereaux/bordereaux-1770664126002-139164850.jpeg",
+        "confirmada": true,
+        "fechaConfirmacion": "2026-02-09T19:20:17.297Z",
+        "created_at": "2026-02-09T18:29:10.540Z",
+        "updated_at": "2026-02-09T19:20:17.308Z",
+        "items": [
+          {
+            "id": "19246bcb-d636-4919-959e-e2b6e674ef49",
+            "liquidacionId": "8b9337bc-63dd-44ab-a2d3-f7f5eb11a374",
+            "tipo": "Deduccion",
+            "concepto": "Argentores",
+            "porcentaje": "10",
+            "monto": "252500"
+          },
+          {
+            "id": "b8279bd5-acae-411a-b41d-5ab7fe0f6dce",
+            "liquidacionId": "8b9337bc-63dd-44ab-a2d3-f7f5eb11a374",
+            "tipo": "Gasto",
+            "concepto": "Gastos de Caja (Registro)",
+            "porcentaje": null,
+            "monto": "108844"
+          }
+        ]
+      },
+      {
+        "id": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+        "funcionId": "af58c906-c050-4cf3-a0ed-5e990d272cb8",
+        "facturacionTotal": "1925000",
+        "costosVenta": "0",
+        "recaudacionBruta": "1925000",
+        "recaudacionNeta": "1732500",
+        "acuerdoPorcentaje": "20",
+        "acuerdoSobre": "Bruta",
+        "resultadoCompania": "1347500",
+        "impuestoTransferencias": "16170",
+        "impuestoTransferenciaPorcentaje": "1.2",
+        "resultadoFuncion": "980438.9",
+        "repartoArtistaPorcentaje": "70",
+        "repartoProduccionPorcentaje": "30",
+        "repartoArtistaMonto": "686307.23",
+        "repartoProduccionMonto": "294131.67",
+        "moneda": "ARS",
+        "tipoCambio": "1",
+        "bordereauxImage": "/uploads/bordereaux/bordereaux-1770665494834-493459824.jpeg",
+        "confirmada": true,
+        "fechaConfirmacion": "2026-02-09T19:31:41.818Z",
+        "created_at": "2026-02-09T19:30:49.598Z",
+        "updated_at": "2026-02-09T19:31:41.820Z",
+        "items": [
+          {
+            "id": "aac8dacd-1af8-4d1a-b614-8946b3b89855",
+            "liquidacionId": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+            "tipo": "Deduccion",
+            "concepto": "Argentores",
+            "porcentaje": "10",
+            "monto": "192500"
+          },
+          {
+            "id": "01c1c4a7-3d82-491d-85a2-ee83b72898ba",
+            "liquidacionId": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+            "tipo": "Gasto",
+            "concepto": "Gastos de Caja (Registro)",
+            "porcentaje": null,
+            "monto": "0"
+          },
+          {
+            "id": "5426fb47-cf45-43da-bd59-c2da3a61d673",
+            "liquidacionId": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+            "tipo": "Gasto",
+            "concepto": "TRASLADO DAY",
+            "porcentaje": null,
+            "monto": "15000"
+          },
+          {
+            "id": "33a2c6ac-d423-4ec7-a818-7071fd4fd079",
+            "liquidacionId": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+            "tipo": "Gasto",
+            "concepto": "PRODUCTORA EJECUTIVA",
+            "porcentaje": null,
+            "monto": "130000"
+          },
+          {
+            "id": "fb015bb4-a4f1-4577-a6ee-bdd4bb6ab445",
+            "liquidacionId": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+            "tipo": "Gasto",
+            "concepto": "MICROFONOS",
+            "porcentaje": null,
+            "monto": "60000"
+          },
+          {
+            "id": "81dcfd66-6ce3-458e-8caa-b4220887be12",
+            "liquidacionId": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+            "tipo": "Gasto",
+            "concepto": "DISEÑO GRAFICO",
+            "porcentaje": null,
+            "monto": "20000"
+          },
+          {
+            "id": "529f47a6-3966-42e7-909d-44ef48a711cf",
+            "liquidacionId": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+            "tipo": "Gasto",
+            "concepto": "PAUTA DIGITAL",
+            "porcentaje": null,
+            "monto": "115891.1"
+          },
+          {
+            "id": "80a6f2da-41a7-438b-b985-5bfbe8f25585",
+            "liquidacionId": "90d565aa-2ed5-4b83-93bc-4a514805cc49",
+            "tipo": "Gasto",
+            "concepto": "PANTALLA",
+            "porcentaje": null,
+            "monto": "10000"
+          }
+        ]
+      }
+    ],
+    "ventas": [
+      {
+        "id": "57dbd0a9-ac25-4979-b568-5fe96d568d9a",
+        "funcionId": "ba492816-ab96-4fc8-a8ee-bb7bd310ebe3",
+        "fechaRegistro": "2026-02-09T18:22:27.258Z",
+        "tipoVenta": "Venta Final",
+        "entradasVendidas": 101,
+        "facturacionBruta": "2525000",
+        "canalVenta": "Ticketera",
+        "created_at": "2026-02-09T18:22:27.259Z"
+      },
+      {
+        "id": "f203078e-43fa-4650-bf70-02fc2ee1ab02",
+        "funcionId": "af58c906-c050-4cf3-a0ed-5e990d272cb8",
+        "fechaRegistro": "2026-02-09T19:28:16.724Z",
+        "tipoVenta": "Venta Final",
+        "entradasVendidas": 77,
+        "facturacionBruta": "1925000",
+        "canalVenta": "Ticketera",
+        "created_at": "2026-02-09T19:28:16.727Z"
+      },
+      {
+        "id": "a9669e4a-a16c-494b-a4d1-d30cd984afb2",
+        "funcionId": "6f73338f-e6de-491f-9ce6-44882bd9e421",
+        "fechaRegistro": "2026-02-09T20:03:47.548Z",
+        "tipoVenta": "Venta Final",
+        "entradasVendidas": 138,
+        "facturacionBruta": "3940000",
+        "canalVenta": "Ticketera",
+        "created_at": "2026-02-09T20:03:47.553Z"
+      },
+      {
+        "id": "1ad7223a-e1a6-448b-b55e-e2b3ffce9086",
+        "funcionId": "6f73338f-e6de-491f-9ce6-44882bd9e421",
+        "fechaRegistro": "2026-02-09T20:05:07.959Z",
+        "tipoVenta": "Preventa",
+        "entradasVendidas": 138,
+        "facturacionBruta": "3940000",
+        "canalVenta": "Ticketera",
+        "created_at": "2026-02-09T20:05:07.977Z"
+      }
+    ],
+    "gastos": [
+      {
+        "id": "3e29aec5-d190-414c-ad42-f5849ca03be2",
+        "obraId": null,
+        "funcionId": "ba492816-ab96-4fc8-a8ee-bb7bd310ebe3",
+        "descripcion": "TRASLADO DAY Y LUCES",
+        "monto": "43875",
+        "tipoGasto": "Publicidad",
+        "comprobanteDocumentoId": null,
+        "fechaGasto": "2026-02-09T00:00:00.000Z",
+        "created_at": "2026-02-09T19:05:38.838Z",
+        "updated_at": "2026-02-09T19:05:38.838Z"
+      },
+      {
+        "id": "2e503c8a-c531-4af2-8aa8-3bc0ed68ce1e",
+        "obraId": null,
+        "funcionId": "ba492816-ab96-4fc8-a8ee-bb7bd310ebe3",
+        "descripcion": "MATERIALES LUCES",
+        "monto": "64969",
+        "tipoGasto": "Publicidad",
+        "comprobanteDocumentoId": null,
+        "fechaGasto": "2026-02-09T00:00:00.000Z",
+        "created_at": "2026-02-09T19:06:05.813Z",
+        "updated_at": "2026-02-09T19:06:05.813Z"
+      }
+    ],
+    "mensajes": []
+  }
+}
