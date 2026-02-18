@@ -2,7 +2,8 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import api from '../lib/api';
 
-export const generateRoadmapPDF = () => {
+export const generateRoadmapPDF = (funcion: any, logistica: any) => {
+    console.log('Generating PDF for:', funcion, logistica);
     // ... (placeholder for future implementation)
 };
 
