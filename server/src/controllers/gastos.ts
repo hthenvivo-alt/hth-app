@@ -109,7 +109,7 @@ export const uploadVoucher = async (req: AuthRequest, res: Response) => {
 
     try {
         const gasto = await prisma.gasto.findUnique({
-            where: { id },
+            where: { id: id as string },
             include: { funcion: true, obra: true }
         });
 
@@ -130,7 +130,7 @@ export const uploadVoucher = async (req: AuthRequest, res: Response) => {
         });
 
         const updatedGasto = await prisma.gasto.update({
-            where: { id },
+            where: { id: id as string },
             data: {
                 comprobanteDocumentoId: documento.id
             },
@@ -171,7 +171,7 @@ export const downloadVouchers = async (req: AuthRequest, res: Response) => {
 
         archive.pipe(res);
 
-        vouchers.forEach(v => {
+        vouchers.forEach((v: any) => {
             const fileName = path.basename(v.linkDrive);
             const filePath = path.join(process.cwd(), 'uploads', 'comprobantes', fileName);
 

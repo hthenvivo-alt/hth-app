@@ -87,7 +87,7 @@ export const getBackups = async (req: AuthRequest, res: Response) => {
 
 export const restoreBackup = async (req: AuthRequest, res: Response) => {
     const { filename } = req.params;
-    const filepath = path.join(BACKUP_DIR, filename);
+    const filepath = path.join(BACKUP_DIR, filename as string);
 
     if (!fs.existsSync(filepath)) {
         return res.status(404).json({ error: 'Backup file not found' });
@@ -174,7 +174,7 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
 
 export const downloadBackup = async (req: AuthRequest, res: Response) => {
     const { filename } = req.params;
-    const filepath = path.join(BACKUP_DIR, filename);
+    const filepath = path.join(BACKUP_DIR, filename as string);
 
     if (!fs.existsSync(filepath)) {
         return res.status(404).json({ error: 'Backup file not found' });

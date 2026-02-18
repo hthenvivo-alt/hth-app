@@ -37,7 +37,7 @@ export const addInvitado = async (req: Request, res: Response) => {
 export const deleteInvitado = async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        await prisma.invitado.delete({ where: { id } });
+        await prisma.invitado.delete({ where: { id: id as string } });
         res.json({ message: 'Invitado eliminado correctamente' });
     } catch (error) {
         console.error(error);
@@ -63,11 +63,11 @@ export const exportToExcel = async (req: Request, res: Response) => {
             { header: 'Cantidad', key: 'cantidad', width: 10 }
         ];
 
-        funcion.invitados.forEach(inv => {
+        funcion.invitados.forEach((inv: any) => {
             worksheet.addRow({ nombre: inv.nombre, cantidad: inv.cantidad });
         });
 
-        const total = funcion.invitados.reduce((acc, inv) => acc + inv.cantidad, 0);
+        const total = funcion.invitados.reduce((acc: number, inv: any) => acc + inv.cantidad, 0);
         worksheet.addRow({});
         worksheet.addRow({ nombre: 'TOTAL', cantidad: total });
 
@@ -106,13 +106,13 @@ export const exportToPDF = async (req: Request, res: Response) => {
         doc.fontSize(14).text('Invitados:', { underline: true });
         doc.moveDown();
 
-        funcion.invitados.forEach(inv => {
+        funcion.invitados.forEach((inv: any) => {
             doc.fontSize(12).text(`${inv.nombre}: ${inv.cantidad}`);
         });
 
-        const total = funcion.invitados.reduce((acc, inv) => acc + inv.cantidad, 0);
+        const total = funcion.invitados.reduce((acc: number, inv: any) => acc + inv.cantidad, 0);
         doc.moveDown();
-        doc.fontSize(14).text(`SUMA TOTAL: ${total}`, { bold: true });
+        doc.font('Helvetica-Bold').fontSize(14).text(`SUMA TOTAL: ${total}`);
 
         doc.end();
     } catch (error) {

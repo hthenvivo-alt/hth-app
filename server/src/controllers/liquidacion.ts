@@ -403,11 +403,11 @@ export const getLiquidacionGrupal = async (req: AuthRequest, res: Response) => {
         if (!grupal) return res.status(404).json({ error: 'Group settlement not found' });
 
         // Fetch detailed expenses for each liquidation
-        const liquidacionesWithGastos = await Promise.all(grupal.liquidaciones.map(async (l) => {
+        const liquidacionesWithGastos = await Promise.all(grupal.liquidaciones.map(async (l: any) => {
             const gastos = await prisma.gasto.findMany({
                 where: { funcionId: l.funcion.id }
             });
-            const gastosCajaSum = gastos.reduce((acc, g) => acc + (Number(g.monto) || 0), 0);
+            const gastosCajaSum = gastos.reduce((acc: number, g: any) => acc + (Number(g.monto) || 0), 0);
             return {
                 ...l,
                 gastosCajaSum,
@@ -486,7 +486,7 @@ export const upsertLiquidacionGrupal = async (req: AuthRequest, res: Response) =
             // For simplicity, let's assume the frontend sends the whole list of items
             if (data.items) {
                 await tx.liquidacionGrupalItem.deleteMany({
-                    where: { grupalId: id }
+                    where: { grupalId: id as string }
                 });
             }
 
@@ -530,7 +530,7 @@ export const deleteLiquidacionGrupalItem = async (req: AuthRequest, res: Respons
     const { itemId } = req.params;
     try {
         await prisma.liquidacionGrupalItem.delete({
-            where: { id: itemId }
+            where: { id: itemId as string }
         });
         res.json({ success: true });
     } catch (error) {
