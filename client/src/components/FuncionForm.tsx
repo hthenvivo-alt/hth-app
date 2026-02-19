@@ -94,14 +94,22 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
     const handleSalaChange = (salaName: string) => {
         setFormData(prev => ({ ...prev, salaNombre: salaName }));
 
-        const existingData = allFunciones?.find((f: any) => f.salaNombre === salaName);
+        // Find the MOST RECENT function for this sala (backend returns ASC, so we take the last match)
+        const matchingFunciones = allFunciones?.filter((f: any) => f.salaNombre === salaName) || [];
+        const existingData = matchingFunciones.length > 0 ? matchingFunciones[matchingFunciones.length - 1] : null;
+
         if (existingData) {
             setFormData(prev => ({
                 ...prev,
                 salaDireccion: existingData.salaDireccion || prev.salaDireccion,
                 ciudad: existingData.ciudad || prev.ciudad,
                 pais: existingData.pais || prev.pais,
-                capacidadSala: existingData.capacidadSala?.toString() || prev.capacidadSala
+                capacidadSala: existingData.capacidadSala?.toString() || prev.capacidadSala,
+                // Suggestions for links and credentials from previous session at this venue
+                linkVentaTicketera: existingData.linkVentaTicketera || prev.linkVentaTicketera,
+                userVentaTicketera: existingData.userVentaTicketera || prev.userVentaTicketera,
+                passVentaTicketera: existingData.passVentaTicketera || prev.passVentaTicketera,
+                linkMonitoreoVenta: existingData.linkMonitoreoVenta || prev.linkMonitoreoVenta,
             }));
         }
     };
