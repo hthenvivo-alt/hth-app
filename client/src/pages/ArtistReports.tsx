@@ -15,11 +15,13 @@ import {
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import { useAuth } from '../context/AuthContext';
+import SalesEvolutionModal from '../components/SalesEvolutionModal';
 
 const ArtistReports: React.FC = () => {
     const { user } = useAuth();
     const isAdmin = user?.rol === 'Administrador' || user?.rol === 'Admin';
     const [selectedObraId, setSelectedObraId] = useState<string>('all');
+    const [selectedFuncionForChart, setSelectedFuncionForChart] = useState<any>(null);
 
     const { data: obras, isLoading } = useQuery({
         queryKey: ['artist-reports'],
@@ -157,21 +159,28 @@ const ArtistReports: React.FC = () => {
 
                                     {/* Link Icon / Action */}
                                     {f.linkMonitoreoVenta && (
-                                        <a
-                                            href={f.linkMonitoreoVenta}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
+                                        <button
+                                            onClick={() => setSelectedFuncionForChart(f)}
                                             className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-primary-500 text-gray-600 hover:text-white transition-all group/action shadow-lg"
-                                            title="Ver Monitoreo"
+                                            title="Ver Evolución de Ventas"
                                         >
                                             <TrendingUp size={20} className="group-hover/action:scale-110 transition-transform" />
-                                        </a>
+                                        </button>
                                     )}
                                 </div>
                             </div>
                         );
                     })}
                 </div>
+            )}
+
+            {selectedFuncionForChart && (
+                <SalesEvolutionModal
+                    funcionId={selectedFuncionForChart.id}
+                    obraNombre={selectedFuncionForChart.obraNombre}
+                    salaNombre={selectedFuncionForChart.salaNombre}
+                    onClose={() => setSelectedFuncionForChart(null)}
+                />
             )}
         </div>
     );
