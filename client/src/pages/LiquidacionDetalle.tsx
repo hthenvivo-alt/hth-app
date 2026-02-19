@@ -20,7 +20,8 @@ import {
     Edit3,
     FileText,
     Download,
-    X
+    X,
+    FileImage
 } from 'lucide-react';
 import { evaluateArithmetic, safeEvaluate } from '../utils/evaluate';
 
@@ -117,7 +118,7 @@ const LiquidacionDetalle: React.FC = () => {
         if (!funcion) return;
 
         // 1. Initial Defaults or Saved Data
-        if (existingLiquidacion) {
+        if (existingLiquidacion && existingLiquidacion.id) {
             // Priority 1: Saved Data (Confirmed or existing Draft with data)
             const brute = Number(existingLiquidacion.facturacionTotal) || 0;
             const sold = Number(funcion.vendidas) || 0; // vendidas is stored on funcion
@@ -543,14 +544,43 @@ const LiquidacionDetalle: React.FC = () => {
                     </div>
                 </div>
                 {/* PDF Button */}
-                <button
-                    onClick={handlePrint}
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl transition-colors font-bold text-sm border border-white/10 shadow-lg shadow-white/5"
-                    title="Exportar PDF"
-                >
-                    <Download size={18} />
-                    <span>Exportar PDF</span>
-                </button>
+                <div className="flex gap-2">
+                    <input
+                        type="file"
+                        id="bordereaux-upload"
+                        className="hidden"
+                        accept="image/*,application/pdf"
+                        onChange={handleBordereauxUpload}
+                        disabled={uploading}
+                    />
+                    <button
+                        onClick={() => document.getElementById('bordereaux-upload')?.click()}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors font-bold text-sm border shadow-lg ${bordereauxImage
+                            ? 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/20 shadow-green-500/5'
+                            : 'bg-white/10 hover:bg-white/20 text-white border-white/10 shadow-white/5'
+                            }`}
+                        title={bordereauxImage ? "Cambiar Bordereaux" : "Adjuntar Bordereaux"}
+                        disabled={uploading}
+                    >
+                        {uploading ? (
+                            <Loader2 className="animate-spin" size={18} />
+                        ) : bordereauxImage?.toLowerCase().endsWith('.pdf') ? (
+                            <FileText size={18} />
+                        ) : (
+                            <FileImage size={18} />
+                        )}
+                        <span>{bordereauxImage ? (bordereauxImage.toLowerCase().endsWith('.pdf') ? 'PDF Adjunto' : 'Imagen Adjunta') : 'Adjuntar Bordereaux'}</span>
+                    </button>
+
+                    <button
+                        onClick={handlePrint}
+                        className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl transition-colors font-bold text-sm border border-white/10 shadow-lg shadow-white/5"
+                        title="Exportar PDF"
+                    >
+                        <Download size={18} />
+                        <span>Exportar PDF</span>
+                    </button>
+                </div>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

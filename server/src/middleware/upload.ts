@@ -17,10 +17,10 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req: any, file: any, cb: any) => {
-    if (file.mimetype.startsWith('image/')) {
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
         cb(null, true);
     } else {
-        cb(new Error('Solo se permiten imágenes'), false);
+        cb(new Error('Solo se permiten imágenes y PDFs'), false);
     }
 };
 

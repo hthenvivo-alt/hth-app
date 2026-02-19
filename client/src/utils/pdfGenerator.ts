@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { PDFDocument } from 'pdf-lib';
 import autoTable from 'jspdf-autotable';
 import api from '../lib/api';
 
@@ -192,70 +193,7 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
         }
     });
 
-    // --- INDIVIDUAL ARTIST PAGES ---
-    for (const r of liqData.repartos) {
-        doc.addPage();
 
-        // Header for Individual Page
-        doc.setFillColor(dark[0], dark[1], dark[2]);
-        doc.rect(0, 0, 210, 40, 'F');
-        doc.setTextColor(255, 255, 255);
-
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text('LIQUIDACIÓN INDIVIDUAL DE ARTISTA', 15, 18);
-
-        doc.setFontSize(12);
-        doc.text(r.nombreArtista.toUpperCase(), 15, 28);
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${obraNombre} - ${fechaStr} - ${funcion.salaNombre}`, 15, 35);
-
-        let curY = 55;
-
-        doc.setTextColor(primary[0], primary[1], primary[2]);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('DETALLE DEL CÁLCULO', 15, curY);
-        curY += 8;
-
-        let baseMonto = 0;
-        if (r.base === 'Bruta') baseMonto = liqData.recaudacionBruta;
-        else if (r.base === 'Neta') baseMonto = liqData.recaudacionNeta;
-        else if (r.base === 'Utilidad') baseMonto = liqData.resultadoFuncion;
-
-        autoTable(doc, {
-            startY: curY,
-            body: [
-                ['Concepto de Base', r.base === 'Utilidad' ? 'Resultado HTH (Utility)' : `Recaudación ${r.base}`],
-                ['Monto Base Imponible', fmt(baseMonto)],
-                ['Porcentaje Acordado', `${r.porcentaje}%`],
-                [{ content: 'Total Bruto a Percibir', styles: { fontStyle: 'bold' } }, fmt(r.monto)],
-                ...(r.retencionAAA && r.retencionAAA > 0 ? [
-                    [{ content: 'Retención AAA', styles: { textColor: [200, 0, 0] as [number, number, number] } }, `- ${fmt(r.retencionAAA)}`]
-                ] : []),
-                [{ content: 'SALDO NETO A COBRAR', styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }, { content: fmt(Number(r.monto) - (r.retencionAAA || 0)), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]
-            ],
-            theme: 'grid',
-            styles: { cellPadding: 8, fontSize: 11 },
-            columnStyles: {
-                1: { halign: 'right' }
-            }
-        });
-
-        curY = (doc as any).lastAutoTable.finalY + 30;
-
-        // Signatures Placeholder
-        doc.setDrawColor(200, 200, 200);
-        doc.line(30, curY, 90, curY);
-        doc.line(120, curY, 180, curY);
-
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Firma Artista / Representante', 40, curY + 5);
-        doc.text('Firma HTH Producciones', 135, curY + 5);
-    }
 
     // FOOTER HELPER
     const addFooter = (doc: jsPDF) => {
@@ -269,8 +207,8 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
         }
     };
 
-    // PAGE 2: BORDEREAUX IMAGE
-    if (liqData.bordereauxImage) {
+    // PAGE 2: BORDEREAUX IMAGE (Only if NOT PDF)
+    if (liqData.bordereauxImage && !liqData.bordereauxImage.toLowerCase().endsWith('.pdf')) {
         doc.addPage();
         doc.setFillColor(dark[0], dark[1], dark[2]);
         doc.rect(0, 0, 210, 20, 'F');
@@ -364,43 +302,45 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
         }
     }
 
-    // SECTION 7: DETALLE DE GASTOS DE CAJA
-    if (gastos && gastos.length > 0) {
-        doc.addPage();
-        let currentY = 20;
 
-        doc.setTextColor(primary[0], primary[1], primary[2]);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('ANEXO: DETALLE DE GASTOS DE CAJA', 15, currentY);
-        currentY += 8;
-
-        const totalGastosCaja = gastos.reduce((sum, g) => sum + (Number(g.monto) || 0), 0);
-
-        autoTable(doc, {
-            startY: currentY,
-            head: [['Fecha', 'Descripción', 'Categoría', 'Importe']],
-            body: [
-                ...gastos.map(g => [
-                    new Date(g.fechaGasto).toLocaleDateString('es-AR'),
-                    g.descripcion,
-                    g.tipoGasto,
-                    fmt(g.monto)
-                ]),
-                [{ content: 'TOTAL GASTOS DE CAJA', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right' } }, { content: fmt(totalGastosCaja), styles: { fontStyle: 'bold' } }]
-            ],
-            theme: 'striped',
-            headStyles: { fillColor: dark as any },
-            columnStyles: {
-                3: { halign: 'right' }
-            }
-        });
-    }
 
     addFooter(doc);
 
+
     const finalFileName = `Liquidacion_${obraNombre.replace(/\s+/g, '_')}_${fechaStr.replace(/\//g, '-')}.pdf`;
-    doc.save(finalFileName);
+
+    // PDF MERGE LOGIC FOR BORDEREAUX
+    if (liqData.bordereauxImage && liqData.bordereauxImage.toLowerCase().endsWith('.pdf')) {
+        try {
+            const reportPdfBytes = doc.output('arraybuffer');
+            const reportPdfDoc = await PDFDocument.load(reportPdfBytes);
+
+            const bordereauxUrl = `${api.defaults.baseURL?.replace('/api', '')}${liqData.bordereauxImage}`;
+            const response = await fetch(bordereauxUrl);
+            const bordereauxBytes = await response.arrayBuffer();
+            const bordereauxPdfDoc = await PDFDocument.load(bordereauxBytes);
+
+            const copiedPages = await reportPdfDoc.copyPages(bordereauxPdfDoc, bordereauxPdfDoc.getPageIndices());
+            copiedPages.forEach((page) => reportPdfDoc.addPage(page));
+
+            const pdfBytes = await reportPdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = finalFileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error merging PDF:', error);
+            alert('Error al fusionar el bordereaux PDF. Se descargará solo el reporte.');
+            doc.save(finalFileName);
+        }
+    } else {
+        doc.save(finalFileName);
+    }
 };
 
 export const generateBatchLiquidacionPDF = async (data: any) => {
