@@ -114,7 +114,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
 
         // 3. Find latest with data
         const matchesWithData = [...matches].reverse().find((f: any) =>
-            f.linkVentaTicketera || f.linkMonitoreoVenta || f.userVentaTicketera || f.passVentaTicketera
+            f.linkVentaTicketera || f.linkMonitoreoVenta || f.userVentaTicketera || f.passVentaTicketera || f.capacidadSala
         );
 
         const existingData = matchesWithData || (matches.length > 0 ? matches[matches.length - 1] : null);
