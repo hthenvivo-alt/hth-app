@@ -169,6 +169,12 @@ const InvitadosModal: React.FC<InvitadosModalProps> = ({ funcionId, onClose }) =
                         <FileText size={18} />
                         <span>PDF</span>
                     </button>
+                    <button
+                        onClick={onClose}
+                        className="flex items-center gap-2 px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all font-black text-sm shadow-lg shadow-primary-500/20 ml-2"
+                    >
+                        LISTO
+                    </button>
                 </div>
             </div>
         </div>
