@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
@@ -56,6 +56,7 @@ const LiquidacionDetalle: React.FC = () => {
     const queryClient = useQueryClient();
     const [showComprobantesModal, setShowComprobantesModal] = useState(false);
     const [uploadingComprobantes, setUploadingComprobantes] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Data Fetching
     const { data: funcion, isLoading: loadingFuncion } = useQuery({
@@ -544,17 +545,17 @@ const LiquidacionDetalle: React.FC = () => {
                     </div>
                 </div>
                 {/* PDF Button */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative z-10 flex-shrink-0">
                     <input
                         type="file"
-                        id="bordereaux-upload"
+                        ref={fileInputRef}
                         className="hidden"
                         accept="image/*,application/pdf"
                         onChange={handleBordereauxUpload}
                         disabled={uploading}
                     />
                     <button
-                        onClick={() => document.getElementById('bordereaux-upload')?.click()}
+                        onClick={() => fileInputRef.current?.click()}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors font-bold text-sm border shadow-lg ${bordereauxImage
                             ? 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/20 shadow-green-500/5'
                             : 'bg-white/10 hover:bg-white/20 text-white border-white/10 shadow-white/5'
