@@ -252,13 +252,15 @@ const Funciones: React.FC = () => {
                                                 >
                                                     <Edit2 size={18} />
                                                 </button>
-                                                <button
-                                                    onClick={(e) => handleDelete(e, func)}
-                                                    className="p-2 hover:bg-white/5 rounded-lg text-gray-500 hover:text-red-500 transition-all"
-                                                    title="Eliminar Función"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                {isAdmin && (
+                                                    <button
+                                                        onClick={(e) => handleDelete(e, func)}
+                                                        className="p-2 hover:bg-white/5 rounded-lg text-gray-500 hover:text-red-500 transition-all"
+                                                        title="Eliminar Función"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                )}
                                             </>
                                         )}
                                         <Link
