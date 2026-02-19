@@ -324,7 +324,7 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
             copiedPages.forEach((page) => reportPdfDoc.addPage(page));
 
             const pdfBytes = await reportPdfDoc.save();
-            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
