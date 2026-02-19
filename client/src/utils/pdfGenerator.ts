@@ -39,6 +39,23 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     const infoHeader = `${fechaStr} - ${funcion.salaNombre} (${funcion.ciudad})`;
     doc.text(infoHeader, 15, 38);
 
+    // LOGO
+    try {
+        const logoImg = new Image();
+        logoImg.src = '/logo_hth.png';
+        await new Promise((resolve) => {
+            logoImg.onload = resolve;
+            logoImg.onerror = resolve;
+        });
+        if (logoImg.complete && logoImg.naturalWidth > 0) {
+            const logoHeight = 25;
+            const logoWidth = (logoImg.naturalWidth * logoHeight) / logoImg.naturalHeight;
+            doc.addImage(logoImg, 'PNG', 195 - logoWidth, 10, logoWidth, logoHeight);
+        }
+    } catch (e) {
+        console.error('Error adding logo to PDF:', e);
+    }
+
     let y = 55;
 
     // HELPER: Format Currency
@@ -364,6 +381,23 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString('es-AR')}`, 15, 38);
+
+    // LOGO
+    try {
+        const logoImg = new Image();
+        logoImg.src = '/logo_hth.png';
+        await new Promise((resolve) => {
+            logoImg.onload = resolve;
+            logoImg.onerror = resolve;
+        });
+        if (logoImg.complete && logoImg.naturalWidth > 0) {
+            const logoHeight = 25;
+            const logoWidth = (logoImg.naturalWidth * logoHeight) / logoImg.naturalHeight;
+            doc.addImage(logoImg, 'PNG', 195 - logoWidth, 10, logoWidth, logoHeight);
+        }
+    } catch (e) {
+        console.error('Error adding logo to PDF:', e);
+    }
 
     let y = 55;
 
