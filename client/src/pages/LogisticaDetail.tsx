@@ -140,6 +140,7 @@ const LogisticaDetail: React.FC = () => {
                             </h3>
                             <LogisticaForm
                                 initialData={logistica}
+                                ciudad={funcion.ciudad}
                                 onSubmit={(data) => upsertMutation.mutate(data)}
                                 onCancel={() => navigate('/funciones')}
                                 isLoading={upsertMutation.isPending}

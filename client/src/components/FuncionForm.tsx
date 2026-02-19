@@ -90,13 +90,34 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
         }
     }, [initialData]);
 
-    // Handle Sala Selection to auto-populate
-    const handleSalaChange = (salaName: string) => {
-        setFormData(prev => ({ ...prev, salaNombre: salaName }));
+    // Consolidate auto-population logic
+    const triggerAutoPopulate = (salaName: string, city: string) => {
+        if (!allFunciones || !salaName) return;
 
-        // Find the MOST RECENT function for this sala (backend returns ASC, so we take the last match)
-        const matchingFunciones = allFunciones?.filter((f: any) => f.salaNombre === salaName) || [];
-        const existingData = matchingFunciones.length > 0 ? matchingFunciones[matchingFunciones.length - 1] : null;
+        const typedSala = salaName.trim().toLowerCase();
+        const typedCity = city?.trim().toLowerCase();
+
+        // 1. Find matches by name
+        let matches = allFunciones.filter((f: any) =>
+            f.salaNombre?.trim().toLowerCase() === typedSala
+        );
+
+        // 2. If we have a city, narrow down to that city
+        if (typedCity && matches.length > 0) {
+            const cityMatches = matches.filter((f: any) =>
+                f.ciudad?.trim().toLowerCase() === typedCity
+            );
+            if (cityMatches.length > 0) {
+                matches = cityMatches;
+            }
+        }
+
+        // 3. Find latest with data
+        const matchesWithData = [...matches].reverse().find((f: any) =>
+            f.linkVentaTicketera || f.linkMonitoreoVenta || f.userVentaTicketera || f.passVentaTicketera
+        );
+
+        const existingData = matchesWithData || (matches.length > 0 ? matches[matches.length - 1] : null);
 
         if (existingData) {
             setFormData(prev => ({
@@ -105,13 +126,22 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                 ciudad: existingData.ciudad || prev.ciudad,
                 pais: existingData.pais || prev.pais,
                 capacidadSala: existingData.capacidadSala?.toString() || prev.capacidadSala,
-                // Suggestions for links and credentials from previous session at this venue
                 linkVentaTicketera: existingData.linkVentaTicketera || prev.linkVentaTicketera,
                 userVentaTicketera: existingData.userVentaTicketera || prev.userVentaTicketera,
                 passVentaTicketera: existingData.passVentaTicketera || prev.passVentaTicketera,
                 linkMonitoreoVenta: existingData.linkMonitoreoVenta || prev.linkMonitoreoVenta,
             }));
         }
+    };
+
+    const handleSalaChange = (salaName: string) => {
+        setFormData(prev => ({ ...prev, salaNombre: salaName }));
+        triggerAutoPopulate(salaName, formData.ciudad);
+    };
+
+    const handleCityChange = (city: string) => {
+        setFormData(prev => ({ ...prev, ciudad: city }));
+        triggerAutoPopulate(formData.salaNombre, city);
     };
 
     const addFecha = () => {
@@ -262,7 +292,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                         list="funcion-cities-list"
                         required
                         value={formData.ciudad}
-                        onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })}
+                        onChange={(e) => handleCityChange(e.target.value)}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                         placeholder="Ej: CABA"
                     />

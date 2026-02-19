@@ -42,12 +42,13 @@ interface LogisticaFormData {
 
 interface Props {
     initialData?: any;
+    ciudad: string;
     onSubmit: (data: LogisticaFormData) => void;
     onCancel: () => void;
     isLoading?: boolean;
 }
 
-const LogisticaForm: React.FC<Props> = ({ initialData, onSubmit, onCancel, isLoading }) => {
+const LogisticaForm: React.FC<Props> = ({ initialData, ciudad, onSubmit, onCancel, isLoading }) => {
     const { register, handleSubmit, reset, watch, setValue } = useForm<LogisticaFormData>();
 
     const noAplicaArtista = watch('alojamientoNoAplicaArtista');
@@ -70,8 +71,18 @@ const LogisticaForm: React.FC<Props> = ({ initialData, onSubmit, onCancel, isLoa
     useEffect(() => {
         if (initialData) {
             reset(initialData);
+        } else if (ciudad && (ciudad.toUpperCase() === 'CABA' || ciudad.toUpperCase() === 'BUENOS AIRES' || ciudad.toUpperCase() === 'CIUDAD AUTÓNOMA DE BUENOS AIRES')) {
+            // Defaults for CABA if it's a new logistics record
+            reset({
+                tipoTrasladoIdaArtista: 'Auto Propio',
+                tipoTrasladoVueltaArtista: 'Auto Propio',
+                tipoTrasladoIdaProduccion: 'Auto Propio',
+                tipoTrasladoVueltaProduccion: 'Auto Propio',
+                alojamientoNoAplicaArtista: true,
+                alojamientoNoAplicaProduccion: true,
+            } as any);
         }
-    }, [initialData, reset]);
+    }, [initialData, ciudad, reset]);
 
     const transportOptions = [
         { value: '', label: 'Seleccionar...' },
