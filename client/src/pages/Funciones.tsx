@@ -205,7 +205,7 @@ const Funciones: React.FC = () => {
                                     <div className="flex items-center space-x-3">
                                         <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-primary-500 rounded-full shadow-[0_0_8px_rgba(14,165,233,0.5)]"
+                                                className="h-full bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)]"
                                                 style={{ width: func.capacidadSala ? `${((func.vendidas || 0) / func.capacidadSala) * 100}%` : '0%' }}
                                             />
                                         </div>

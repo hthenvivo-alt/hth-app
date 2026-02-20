@@ -139,7 +139,7 @@ const ArtistReports: React.FC = () => {
                                         </div>
                                         <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--primary-rgb),0.3)]"
+                                                className="h-full bg-gradient-to-r from-amber-600 to-amber-400 transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(245,158,11,0.3)]"
                                                 style={{ width: `${percentage}%` }}
                                             />
                                         </div>
