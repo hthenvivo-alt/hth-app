@@ -158,15 +158,13 @@ const ArtistReports: React.FC = () => {
                                     </div>
 
                                     {/* Link Icon / Action */}
-                                    {f.linkMonitoreoVenta && (
-                                        <button
-                                            onClick={() => setSelectedFuncionForChart(f)}
-                                            className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-primary-500 text-gray-600 hover:text-white transition-all group/action shadow-lg"
-                                            title="Ver Evolución de Ventas"
-                                        >
-                                            <TrendingUp size={20} className="group-hover/action:scale-110 transition-transform" />
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => setSelectedFuncionForChart(f)}
+                                        className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center hover:bg-primary-500 text-gray-600 hover:text-white transition-all group/action shadow-lg"
+                                        title="Ver Evolución de Ventas"
+                                    >
+                                        <TrendingUp size={20} className="group-hover/action:scale-110 transition-transform" />
+                                    </button>
                                 </div>
                             </div>
                         );
