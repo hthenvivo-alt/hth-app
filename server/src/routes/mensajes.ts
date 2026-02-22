@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMensajes, createMensaje, deleteMensaje } from '../controllers/mensajes.js';
+import { getMensajes, createMensaje, deleteMensaje, togglePin, toggleArchive } from '../controllers/mensajes.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
@@ -9,5 +9,7 @@ router.use(authenticate);
 router.get('/', getMensajes);
 router.post('/', createMensaje);
 router.delete('/:id', deleteMensaje);
+router.patch('/:id/pin', togglePin);
+router.patch('/:id/archive', toggleArchive);
 
 export default router;

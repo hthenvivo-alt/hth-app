@@ -202,12 +202,17 @@ model Gasto {
 }
 
 model Mensaje {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   contenido  String
   autorId    String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  autor      User     @relation(fields: [autorId], references: [id])
+  isPinned   Boolean   @default(false)
+  isArchived Boolean   @default(false)
+  parentId   String?
+  parent     Mensaje?  @relation("Thread", fields: [parentId], references: [id])
+  replies    Mensaje[] @relation("Thread")
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  autor      User      @relation(fields: [autorId], references: [id])
 }
 
 model Liquidacion {

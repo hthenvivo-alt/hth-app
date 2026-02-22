@@ -25,7 +25,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
 
-        const [funcionesSemana, funcionesMes, funcionesAnio] = await Promise.all([
+        const [funcionesSemanaCount, funcionesMes, funcionesAnio] = await Promise.all([
             prisma.funcion.count({
                 where: { fecha: { gte: startOfWeek, lte: endOfWeek } }
             }),
@@ -37,8 +37,14 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             })
         ]);
 
+        const funcionesSemana = await prisma.funcion.findMany({
+            where: { fecha: { gte: startOfWeek, lte: endOfWeek } },
+            orderBy: { fecha: 'asc' },
+            include: { obra: true }
+        });
+
         const funcionesRecientes = await prisma.funcion.findMany({
-            take: 10, // Increase for scrollability
+            take: 10,
             orderBy: { fecha: 'asc' },
             where: { fecha: { gte: new Date() } },
             include: {
@@ -77,11 +83,12 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
 
         res.json({
             stats: {
-                semana: funcionesSemana,
+                semana: funcionesSemanaCount,
                 mes: funcionesMes,
                 anio: funcionesAnio
             },
-            funciones: funcionesWithStats
+            funciones: funcionesWithStats,
+            funcionesSemana: funcionesSemana
         });
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
