@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAgentBoard, getReferenceData, createAgentFuncion } from '../controllers/agent.js';
+import { getAgentBoard, getReferenceData, createAgentFuncion, getAgentFunciones } from '../controllers/agent.js';
 import { agentAuthenticate } from '../middleware/agentAuth.js';
 
 const router = Router();
@@ -9,6 +9,7 @@ router.use(agentAuthenticate);
 
 router.get('/board', getAgentBoard);
 router.get('/reference', getReferenceData);
+router.get('/funciones', getAgentFunciones);
 router.post('/funciones', createAgentFuncion);
 
 export default router;

@@ -82,3 +82,35 @@ export const createAgentFuncion = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ error: 'Error creating funcion via agent' });
     }
 };
+
+export const getAgentFunciones = async (req: AuthRequest, res: Response) => {
+    try {
+        const funciones = await prisma.funcion.findMany({
+            include: {
+                obra: { select: { nombre: true } }
+            },
+            orderBy: { fecha: 'desc' }
+        });
+
+        const formattedFunciones = funciones.map(f => ({
+            id: f.id,
+            obra: f.obra.nombre,
+            fecha: f.fecha,
+            salaNombre: f.salaNombre,
+            ciudad: f.ciudad,
+            entradasVendidas: f.vendidas,
+            capacidadTotal: f.capacidadSala || 0,
+            porcentajeOcupacion: f.capacidadSala && f.capacidadSala > 0
+                ? Math.round((f.vendidas / f.capacidadSala) * 100)
+                : 0
+        }));
+
+        res.json({
+            count: formattedFunciones.length,
+            funciones: formattedFunciones
+        });
+    } catch (error) {
+        console.error('Agent get funciones error:', error);
+        res.status(500).json({ error: 'Error fetching funciones via agent' });
+    }
+};
