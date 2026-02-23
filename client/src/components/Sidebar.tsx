@@ -26,6 +26,7 @@ const Sidebar: React.FC = () => {
     ];
 
     const isArtist = user?.rol === 'Artista';
+    const isProductor = user?.rol === 'Productor';
     const isAdmin = user?.rol === 'Administrador' || user?.rol === 'Admin';
 
     if (isArtist) {
@@ -38,6 +39,8 @@ const Sidebar: React.FC = () => {
         navItems.push({ icon: BarChart3, label: 'Liquidación', path: '/liquidacion' });
         navItems.push({ icon: Users, label: 'Usuarios', path: '/usuarios' });
         navItems.push({ icon: Settings, label: 'Configuración', path: '/settings' });
+    } else if (isProductor) {
+        navItems.splice(2, 0, { icon: BarChart3, label: 'Reportes', path: '/reportes' });
     }
 
     return (

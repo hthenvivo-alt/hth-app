@@ -3,9 +3,164 @@ import { PDFDocument } from 'pdf-lib';
 import autoTable from 'jspdf-autotable';
 import api from '../lib/api';
 
-export const generateRoadmapPDF = (funcion: any, logistica: any) => {
-    console.log('Generating PDF for:', funcion, logistica);
-    // ... (placeholder for future implementation)
+export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
+    const doc = new jsPDF();
+    const obraNombre = funcion.obra?.nombre || 'Hoja de Ruta';
+    const d = new Date(funcion.fecha);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const fechaStr = `${day}/${month}/${year}`;
+
+    // COLORS
+    const primary = [220, 38, 38]; // HTH Red
+    const dark = [30, 30, 30];
+
+    // HEADER
+    doc.setFillColor(dark[0], dark[1], dark[2]);
+    doc.rect(0, 0, 210, 45, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('HOJA DE RUTA / LOGÍSTICA', 15, 20);
+
+    doc.setFontSize(14);
+    doc.text(obraNombre.toUpperCase(), 15, 30);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const infoHeader = `${fechaStr} - ${funcion.salaNombre} (${funcion.ciudad})`;
+    doc.text(infoHeader, 15, 38);
+
+    // LOGO
+    try {
+        const logoImg = new Image();
+        logoImg.src = '/logo_hth.png';
+        await new Promise((resolve) => {
+            logoImg.onload = resolve;
+            logoImg.onerror = resolve;
+        });
+        if (logoImg.complete && logoImg.naturalWidth > 0) {
+            const logoHeight = 25;
+            const logoWidth = (logoImg.naturalWidth * logoHeight) / logoImg.naturalHeight;
+            doc.addImage(logoImg, 'PNG', 195 - logoWidth, 10, logoWidth, logoHeight);
+        }
+    } catch (e) {
+        console.error('Error adding logo to PDF:', e);
+    }
+
+    let y = 55;
+
+    // SECTION: GENERAL INFO
+    doc.setTextColor(primary[0], primary[1], primary[2]);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INFORMACIÓN GENERAL', 15, y);
+    y += 5;
+
+    autoTable(doc, {
+        startY: y,
+        body: [
+            ['Función', obraNombre],
+            ['Fecha', fechaStr],
+            ['Lugar', `${funcion.salaNombre}, ${funcion.ciudad}`],
+            ['Dirección', funcion.salaDireccion || '-'],
+            ['Citación Artista', logistica?.horarioCitacionArtista || '-'],
+            ['Entrada a Sala', logistica?.horarioEntradaSala || '-'],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 3 },
+        columnStyles: { 0: { fontStyle: 'bold', width: 40 } }
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION: TRASLADOS
+    doc.setTextColor(primary[0], primary[1], primary[2]);
+    doc.text('TRASLADOS Y RUTAS', 15, y);
+    y += 5;
+
+    autoTable(doc, {
+        startY: y,
+        head: [['Etapa', 'Tipo / Detalle Artista', 'Tipo / Detalle Producción']],
+        body: [
+            ['IDA', `${logistica?.tipoTrasladoIdaArtista || '-'} / ${logistica?.detalleTrasladoIdaArtista || '-'}`, `${logistica?.tipoTrasladoIdaProduccion || '-'} / ${logistica?.detalleTrasladoIdaProduccion || '-'}`],
+            ['VUELTA', `${logistica?.tipoTrasladoVueltaArtista || '-'} / ${logistica?.detalleTrasladoVueltaArtista || '-'}`, `${logistica?.tipoTrasladoVueltaProduccion || '-'} / ${logistica?.detalleTrasladoVueltaProduccion || '-'}`],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: dark as any },
+        styles: { fontSize: 9 }
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION: ALOJAMIENTOS
+    doc.setTextColor(primary[0], primary[1], primary[2]);
+    doc.text('ALOJAMIENTO', 15, y);
+    y += 5;
+
+    autoTable(doc, {
+        startY: y,
+        head: [['Personal', 'Hotel / Dirección']],
+        body: [
+            ['ARTISTAS', logistica?.alojamientoNoAplicaArtista ? 'NO APLICA' : `${logistica?.hotelNombreArtista || '-'} / ${logistica?.hotelDireccionArtista || '-'}`],
+            ['PRODUCCIÓN', logistica?.alojamientoNoAplicaProduccion ? 'NO APLICA' : `${logistica?.hotelNombreProduccion || '-'} / ${logistica?.hotelDireccionProduccion || '-'}`],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: dark as any },
+        styles: { fontSize: 9 }
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION: CONTACTOS Y COMIDAS
+    doc.setTextColor(primary[0], primary[1], primary[2]);
+    doc.text('CONTACTOS Y OTROS', 15, y);
+    y += 5;
+
+    autoTable(doc, {
+        startY: y,
+        body: [
+            ['Contactos Locales', logistica?.contactosLocales || '-'],
+            ['Detalle Comidas', logistica?.comidasDetalle || '-'],
+            ['Tel. Prod. Ejecutivo', logistica?.telProductorEjecutivo || '-'],
+            ['Tel. Prod. Asociado', logistica?.telProductorAsociado || '-'],
+            ['Tel. Traslados', logistica?.telTraslados || '-'],
+            ['Tel. Hoteles', logistica?.telHoteles || '-'],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 0: { fontStyle: 'bold', width: 40 } }
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION: NOTAS DE PRODUCCIÓN
+    if (funcion.notasProduccion) {
+        if (y > 240) { doc.addPage(); y = 20; }
+        doc.setTextColor(primary[0], primary[1], primary[2]);
+        doc.text('NOTAS DE PRODUCCIÓN', 15, y);
+        y += 5;
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        const splitNotes = doc.splitTextToSize(funcion.notasProduccion, 180);
+        doc.text(splitNotes, 15, y);
+    }
+
+    // FOOTER
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Generado por HTH Gestión - ${new Date().toLocaleString('es-AR')}`, 15, 285);
+        doc.text(`Página ${i} de ${pageCount}`, 180, 285);
+    }
+
+    const finalFileName = `HojaDeRuta_${obraNombre.replace(/\s+/g, '_')}_${fechaStr.replace(/\//g, '-')}.pdf`;
+    doc.save(finalFileName);
 };
 
 export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos: any[] = [], comprobantes: any[] = []) => {

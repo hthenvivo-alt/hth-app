@@ -20,6 +20,8 @@ import SalesEvolutionModal from '../components/SalesEvolutionModal';
 const ArtistReports: React.FC = () => {
     const { user } = useAuth();
     const isAdmin = user?.rol === 'Administrador' || user?.rol === 'Admin';
+    const isProductor = user?.rol === 'Productor';
+    const canFilter = isAdmin || isProductor;
     const [selectedObraId, setSelectedObraId] = useState<string>('all');
     const [selectedFuncionForChart, setSelectedFuncionForChart] = useState<any>(null);
 
@@ -58,15 +60,15 @@ const ArtistReports: React.FC = () => {
                     <div>
                         <h1 className="text-sm font-black text-primary-500 uppercase tracking-[0.4em] mb-3 flex items-center gap-3">
                             <TrendingUp size={24} />
-                            {isAdmin ? 'Panel de Administración' : 'Portal del Artista'}
+                            {canFilter ? 'Panel de Administración' : 'Portal del Artista'}
                         </h1>
-                        <h2 className="text-5xl font-black text-white tracking-tighter mb-4 italic">Monitor de {isAdmin ? 'Ventas' : 'Funciones'}</h2>
+                        <h2 className="text-5xl font-black text-white tracking-tighter mb-4 italic">Monitor de {canFilter ? 'Ventas' : 'Funciones'}</h2>
                         <p className="text-gray-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2">
                             Control de venta de entradas y agenda en tiempo real
                         </p>
                     </div>
 
-                    {isAdmin && (
+                    {canFilter && (
                         <div className="relative group min-w-[300px]">
                             <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-500" />
                             <select

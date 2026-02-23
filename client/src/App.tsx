@@ -38,7 +38,7 @@ const App: React.FC = () => {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={user ? (user.rol === 'Artista' ? <Navigate to="/reportes" /> : <Dashboard />) : <Navigate to="/login" />} />
-            <Route path="/reportes" element={(user?.rol === 'Artista' || user?.rol === 'Administrador' || user?.rol === 'Admin') ? <ArtistReports /> : <Navigate to="/" />} />
+            <Route path="/reportes" element={(user?.rol === 'Artista' || user?.rol === 'Administrador' || user?.rol === 'Admin' || user?.rol === 'Productor') ? <ArtistReports /> : <Navigate to="/" />} />
             <Route path="/obras" element={(user?.rol === 'Administrador' || user?.rol === 'Admin') ? <Obras /> : <Navigate to="/" />} />
             <Route path="/funciones" element={user ? <Funciones /> : <Navigate to="/login" />} />
             <Route path="/logistica/:id" element={user ? <LogisticaDetail /> : <Navigate to="/login" />} />

@@ -11,20 +11,17 @@ export const getArtistReport = async (req: AuthRequest, res: Response) => {
         }
 
         const isAdmin = req.user?.rol === 'Administrador' || req.user?.rol === 'Admin';
+        const isProductor = req.user?.rol === 'Productor';
 
         const obras = await prisma.obra.findMany({
-            where: isAdmin ? {} : {
-                artistas: {
-                    some: { id: userId }
-                }
+            where: (isAdmin || isProductor) ? {} : {
+                OR: [
+                    { artistas: { some: { id: userId } } },
+                    { productorEjecutivoId: userId }
+                ]
             },
             include: {
                 funciones: {
-                    where: {
-                        fecha: {
-                            gte: new Date() // Only future or current functions
-                        }
-                    },
                     orderBy: {
                         fecha: 'asc'
                     }
