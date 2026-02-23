@@ -25,7 +25,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
 
-        const [funcionesSemanaCount, funcionesMes, funcionesAnio] = await Promise.all([
+        const [funcionesSemanaCount, funcionesMes, funcionesAnio, liquidacionesPendientes] = await Promise.all([
             prisma.funcion.count({
                 where: { fecha: { gte: startOfWeek, lte: endOfWeek } }
             }),
@@ -34,6 +34,9 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             }),
             prisma.funcion.count({
                 where: { fecha: { gte: startOfYear, lte: endOfYear } }
+            }),
+            prisma.liquidacion.count({
+                where: { confirmada: false }
             })
         ]);
 
@@ -85,7 +88,8 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             stats: {
                 semana: funcionesSemanaCount,
                 mes: funcionesMes,
-                anio: funcionesAnio
+                anio: funcionesAnio,
+                liquidacionesPendientes
             },
             funciones: funcionesWithStats,
             funcionesSemana: funcionesSemana

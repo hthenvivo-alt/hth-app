@@ -17,12 +17,13 @@ import { formatDate } from '../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
 import Billboard from '../components/Billboard';
-
 import OccupationGauge from '../components/OccupationGauge';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
+    const { user: currentUser } = useAuth();
     const { data: dashboardData, isLoading } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
@@ -55,6 +56,18 @@ const Dashboard: React.FC = () => {
         },
     ];
 
+    const isAdmin = currentUser?.rol === 'Administrador' || currentUser?.rol === 'Admin';
+
+    if (isAdmin) {
+        stats.push({
+            label: 'Liquidaciones Pendientes',
+            value: dashboardData?.stats?.liquidacionesPendientes || 0,
+            icon: DollarSign,
+            color: 'text-amber-500',
+            bgColor: 'bg-amber-500/10'
+        });
+    }
+
     const proximasFunciones = dashboardData?.funciones || [];
     const funcionesSemana = dashboardData?.funcionesSemana || [];
 
@@ -75,7 +88,7 @@ const Dashboard: React.FC = () => {
             </header>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className={`grid grid-cols-1 ${stats.length === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6 mb-12`}>
                 {stats.map((stat, i) => (
                     <div key={i} className="bg-[#121212] border border-white/5 p-6 rounded-3xl hover:border-white/10 transition-all group relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">

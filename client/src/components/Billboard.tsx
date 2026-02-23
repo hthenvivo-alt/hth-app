@@ -24,6 +24,7 @@ const Billboard: React.FC = () => {
     const [newMsg, setNewMsg] = useState('');
     const [replyTo, setReplyTo] = useState<string | null>(null);
     const [replyContent, setReplyContent] = useState('');
+    const [hasNewMessages, setHasNewMessages] = useState(false);
     const queryClient = useQueryClient();
 
     const userString = localStorage.getItem('user');
@@ -36,6 +37,30 @@ const Billboard: React.FC = () => {
             return res.data;
         }
     });
+
+    // Check for new messages
+    React.useEffect(() => {
+        if (!mensajes || mensajes.length === 0) return;
+
+        const lastSeen = localStorage.getItem('billboard_last_seen');
+        const latestMsgTime = new Date(mensajes[0].created_at).getTime();
+
+        if (!lastSeen || latestMsgTime > parseInt(lastSeen)) {
+            setHasNewMessages(true);
+        }
+    }, [mensajes]);
+
+    // Mark as seen after 3 seconds of viewing
+    React.useEffect(() => {
+        if (hasNewMessages) {
+            const timer = setTimeout(() => {
+                const now = Date.now();
+                localStorage.setItem('billboard_last_seen', now.toString());
+                setHasNewMessages(false);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [hasNewMessages]);
 
     const createMutation = useMutation({
         mutationFn: async ({ contenido, parentId }: { contenido: string, parentId?: string | null }) => {
@@ -87,8 +112,8 @@ const Billboard: React.FC = () => {
         <div
             key={msg.id}
             className={`group border transition-all ${isReply
-                    ? 'ml-8 mt-2 bg-white/[0.02] border-white/5 rounded-xl p-3'
-                    : `bg-white/5 rounded-2xl p-5 ${msg.isPinned ? 'border-amber-500/30 bg-amber-500/[0.02]' : 'border-white/5 hover:border-white/10'}`
+                ? 'ml-8 mt-2 bg-white/[0.02] border-white/5 rounded-xl p-3'
+                : `bg-white/5 rounded-2xl p-5 ${msg.isPinned ? 'border-amber-500/30 bg-amber-500/[0.02]' : 'border-white/5 hover:border-white/10'}`
                 }`}
         >
             <div className="flex justify-between items-start mb-2">
@@ -183,10 +208,20 @@ const Billboard: React.FC = () => {
         <div className="bg-[#121212] border border-white/5 rounded-[2.5rem] flex flex-col h-[700px] shadow-2xl relative overflow-hidden">
             <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center relative">
                         <MessageSquare size={20} className="text-primary-500" />
+                        {hasNewMessages && (
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#121212] animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                        )}
                     </div>
-                    <h2 className="text-2xl font-black italic uppercase tracking-tight">Cartelera de Equipo</h2>
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-2xl font-black italic uppercase tracking-tight">Cartelera de Equipo</h2>
+                        {hasNewMessages && (
+                            <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-widest rounded-md border border-red-500/20 animate-pulse">
+                                Nuevo
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
 
