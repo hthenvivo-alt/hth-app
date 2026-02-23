@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import { Send, Trash2, MessageSquare, Loader2, Pin, CheckCircle2, Reply } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface Mensaje {
     id: string;
@@ -26,9 +27,9 @@ const Billboard: React.FC = () => {
     const [replyContent, setReplyContent] = useState('');
     const [hasNewMessages, setHasNewMessages] = useState(false);
     const queryClient = useQueryClient();
+    const { user: currentUser } = useAuth();
 
-    const userString = localStorage.getItem('user');
-    const currentUser = userString ? JSON.parse(userString) : null;
+    const isAdmin = currentUser?.rol === 'Admin' || currentUser?.rol === 'Administrador';
 
     const { data: mensajes, isLoading } = useQuery<Mensaje[]>({
         queryKey: ['mensajes'],
@@ -132,41 +133,44 @@ const Billboard: React.FC = () => {
                     <span className="text-[10px] text-gray-500">
                         {new Date(msg.created_at).toLocaleString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2">
                         {!isReply && (
                             <button
                                 onClick={() => setReplyTo(replyTo === msg.id ? null : msg.id)}
-                                className="text-gray-500 hover:text-primary-500 transition-colors"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${replyTo === msg.id
+                                    ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-primary-400'}`}
                                 title="Responder"
                             >
-                                <Reply size={14} />
+                                <Reply size={16} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Responder</span>
                             </button>
                         )}
-                        {currentUser?.rol === 'Admin' && !isReply && (
+                        {isAdmin && !isReply && (
                             <>
                                 <button
                                     onClick={() => pinMutation.mutate(msg.id)}
-                                    className={`${msg.isPinned ? 'text-amber-500' : 'text-gray-600'} hover:text-amber-500 transition-colors`}
+                                    className={`p-1.5 rounded-lg transition-all ${msg.isPinned ? 'bg-amber-500/10 text-amber-500' : 'text-gray-600 hover:bg-white/5 hover:text-amber-500'}`}
                                     title={msg.isPinned ? "Desfijar" : "Fijar mensaje"}
                                 >
-                                    <Pin size={14} className={msg.isPinned ? 'fill-amber-500' : ''} />
+                                    <Pin size={16} className={msg.isPinned ? 'fill-amber-500' : ''} />
                                 </button>
                                 <button
                                     onClick={() => archiveMutation.mutate(msg.id)}
-                                    className="text-gray-600 hover:text-green-500 transition-colors"
+                                    className="p-1.5 rounded-lg text-gray-600 hover:bg-white/5 hover:text-green-500 transition-all"
                                     title="Marcar como resuelto / Archivar"
                                 >
-                                    <CheckCircle2 size={14} />
+                                    <CheckCircle2 size={16} />
                                 </button>
                             </>
                         )}
-                        {(currentUser?.rol === 'Admin' || currentUser?.id === msg.autorId) && (
+                        {(isAdmin || currentUser?.id === msg.autorId) && (
                             <button
                                 onClick={() => deleteMutation.mutate(msg.id)}
-                                className="text-gray-600 hover:text-red-500 transition-colors"
+                                className="p-1.5 rounded-lg text-gray-600 hover:bg-white/5 hover:text-red-500 transition-all"
                                 title="Eliminar"
                             >
-                                <Trash2 size={14} />
+                                <Trash2 size={16} />
                             </button>
                         )}
                     </div>
