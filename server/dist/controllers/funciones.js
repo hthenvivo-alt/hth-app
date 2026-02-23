@@ -88,6 +88,30 @@ export const createFuncion = async (req, res) => {
                 console.warn(`Auto-sync Calendar failed for funcion ${funcion.id}:`, error);
             }
         }
+        // Automated Billboard Announcement (non-blocking)
+        try {
+            const obra = await prisma.obra.findUnique({ where: { id: obraId }, select: { nombre: true } });
+            if (obra) {
+                let mensajeContenido = '';
+                if (createdFunciones.length === 1) {
+                    const f = createdFunciones[0];
+                    const dateStr = f.fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+                    mensajeContenido = `📣 ¡Nueva función programada!\n**${obra.nombre}** en ${f.salaNombre} (${f.ciudad}) para el día **${dateStr}**.`;
+                }
+                else {
+                    mensajeContenido = `📣 ¡Nuevas funciones programadas!\nSe han agregado **${createdFunciones.length}** nuevas fechas de **${obra.nombre}** en ${salaNombre} (${ciudad}).`;
+                }
+                await prisma.mensaje.create({
+                    data: {
+                        contenido: mensajeContenido,
+                        autorId: req.user.id,
+                    }
+                });
+            }
+        }
+        catch (error) {
+            console.warn('Auto-billboard announcement failed:', error);
+        }
         res.status(201).json(createdFunciones.length === 1 ? createdFunciones[0] : createdFunciones);
     }
     catch (error) {

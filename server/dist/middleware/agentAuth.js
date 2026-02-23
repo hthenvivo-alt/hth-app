@@ -1,7 +1,7 @@
 /**
  * Middleware to authenticate external agents via API Key
  */
-export const agentAuthenticate = (req, res, next) => {
+export const agentAuthenticate = async (req, res, next) => {
     const agentKey = req.headers['x-agent-key'] || req.query.agentKey;
     const validKey = process.env.AGENT_API_KEY;
     if (!validKey) {
@@ -11,12 +11,24 @@ export const agentAuthenticate = (req, res, next) => {
     if (!agentKey || agentKey !== validKey) {
         return res.status(401).json({ error: 'Unauthorized: Invalid Agent Key' });
     }
-    // Assign a virtual admin user for the agent to bypass role checks in existing logic if needed
-    // or just to identify the agent in logs
+    // Ensure a virtual admin user exists for the agent in the database to satisfy foreign key constraints
+    let agentUser = await import('../lib/prisma.js').then(m => m.default.user.findFirst({ where: { email: 'agent@openclaw.ai' } }));
+    if (!agentUser) {
+        agentUser = await import('../lib/prisma.js').then(m => m.default.user.create({
+            data: {
+                id: 'external-agent',
+                email: 'agent@openclaw.ai',
+                nombre: 'Agente',
+                apellido: 'OpenClaw',
+                rol: 'Administrador',
+                activo: true
+            }
+        }));
+    }
     req.user = {
-        id: 'external-agent',
-        email: 'agent@openclaw.ai',
-        rol: 'Admin'
+        id: agentUser.id,
+        email: agentUser.email,
+        rol: agentUser.rol
     };
     next();
 };
