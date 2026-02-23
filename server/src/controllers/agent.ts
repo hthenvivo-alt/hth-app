@@ -102,12 +102,13 @@ export const getAgentFunciones = async (req: AuthRequest, res: Response) => {
     try {
         const funciones = await prisma.funcion.findMany({
             include: {
-                obra: { select: { nombre: true } }
+                obra: { select: { nombre: true } },
+                liquidacion: { select: { recaucadionBruta: true, confirmada: true } }
             },
             orderBy: { fecha: 'desc' }
         });
 
-        const formattedFunciones = funciones.map(f => ({
+        const formattedFunciones = funciones.map((f: any) => ({
             id: f.id,
             obra: f.obra.nombre,
             fecha: f.fecha,
@@ -117,7 +118,9 @@ export const getAgentFunciones = async (req: AuthRequest, res: Response) => {
             capacidadTotal: f.capacidadSala || 0,
             porcentajeOcupacion: f.capacidadSala && f.capacidadSala > 0
                 ? Math.round((f.vendidas / f.capacidadSala) * 100)
-                : 0
+                : 0,
+            ingresoBruto: f.liquidacion?.recaucadionBruta || 0,
+            liquidacionConfirmada: f.liquidacion?.confirmada || false
         }));
 
         res.json({
@@ -127,5 +130,43 @@ export const getAgentFunciones = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('Agent get funciones error:', error);
         res.status(500).json({ error: 'Error fetching funciones via agent' });
+    }
+};
+
+export const getAgentFuncionDetail = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Missing funcion ID' });
+    }
+
+    try {
+        const funcion = await prisma.funcion.findUnique({
+            where: { id },
+            include: {
+                obra: {
+                    include: {
+                        artistaPayouts: true
+                    }
+                },
+                ventas: true,
+                gastos: true,
+                liquidacion: {
+                    include: {
+                        items: true,
+                        repartos: true
+                    }
+                }
+            }
+        });
+
+        if (!funcion) {
+            return res.status(404).json({ error: 'Funcion not found' });
+        }
+
+        res.json(funcion);
+    } catch (error) {
+        console.error('Agent get funcion detail error:', error);
+        res.status(500).json({ error: 'Error fetching funcion detail via agent' });
     }
 };
