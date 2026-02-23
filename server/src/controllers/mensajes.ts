@@ -85,11 +85,11 @@ export const togglePin = async (req: AuthRequest, res: Response) => {
     if (req.user!.rol !== 'Admin') return res.status(403).json({ error: 'No autorizado' });
 
     try {
-        const mensaje = await prisma.mensaje.findUnique({ where: { id } });
+        const mensaje = await prisma.mensaje.findUnique({ where: { id: id as string } });
         if (!mensaje) return res.status(404).json({ error: 'Mensaje no encontrado' });
 
         const updated = await prisma.mensaje.update({
-            where: { id },
+            where: { id: id as string },
             data: { isPinned: !mensaje.isPinned }
         });
         res.json(updated);
@@ -103,11 +103,11 @@ export const toggleArchive = async (req: AuthRequest, res: Response) => {
     if (req.user!.rol !== 'Admin') return res.status(403).json({ error: 'No autorizado' });
 
     try {
-        const mensaje = await prisma.mensaje.findUnique({ where: { id } });
+        const mensaje = await prisma.mensaje.findUnique({ where: { id: id as string } });
         if (!mensaje) return res.status(404).json({ error: 'Mensaje no encontrado' });
 
         const updated = await prisma.mensaje.update({
-            where: { id },
+            where: { id: id as string },
             data: { isArchived: !mensaje.isArchived }
         });
         res.json(updated);
