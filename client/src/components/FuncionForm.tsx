@@ -82,7 +82,11 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
 
             if (initialData.fecha) {
                 const date = new Date(initialData.fecha);
-                const dateP = date.toISOString().split('T')[0];
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateP = `${year}-${month}-${day}`;
+
                 const hours = String(date.getHours()).padStart(2, '0');
                 const minutes = String(Math.floor(date.getMinutes() / 5) * 5).padStart(2, '0');
                 setFechas([{ date: dateP, time: `${hours}:${minutes}` }]);
@@ -167,8 +171,14 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
         setError('');
 
         try {
-            // Combine dates and times
-            const isoFechas = fechas.map(f => `${f.date}T${f.time}:00`);
+            // Combine dates and times and convert to UTC ISO string
+            const isoFechas = fechas.map(f => {
+                const [year, month, day] = f.date.split('-').map(Number);
+                const [hour, minute] = f.time.split(':').map(Number);
+                // Create date object in local time
+                const localDate = new Date(year, month - 1, day, hour, minute);
+                return localDate.toISOString();
+            });
 
             const payload = {
                 ...formData,
