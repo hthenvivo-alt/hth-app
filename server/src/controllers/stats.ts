@@ -35,8 +35,14 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
             prisma.funcion.count({
                 where: { fecha: { gte: startOfYear, lte: endOfYear } }
             }),
-            prisma.liquidacion.count({
-                where: { confirmada: false }
+            prisma.funcion.count({
+                where: {
+                    fecha: { lt: now },
+                    OR: [
+                        { liquidacion: null },
+                        { liquidacion: { confirmada: false } }
+                    ]
+                }
             })
         ]);
 

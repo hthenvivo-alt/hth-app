@@ -88,7 +88,7 @@ const Dashboard: React.FC = () => {
             </header>
 
             {/* Stats Grid */}
-            <div className={`grid grid-cols-1 ${stats.length === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6 mb-12`}>
+            <div className={`grid grid-cols-1 ${stats.length === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6 mb-6`}>
                 {stats.map((stat, i) => (
                     <div key={i} className="bg-[#121212] border border-white/5 p-6 rounded-3xl hover:border-white/10 transition-all group relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
@@ -109,23 +109,31 @@ const Dashboard: React.FC = () => {
 
             {/* Top 5 Upcoming Occupation Gauges */}
             {proximasFunciones.length > 0 && (
-                <div className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                    <div className="flex items-center justify-between mb-8">
+                <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                    <div className="flex items-center justify-between mb-6">
                         <h2 className="text-2xl font-black flex items-center space-x-3 italic uppercase">
                             <TrendingUpIcon size={24} className="text-amber-500" />
                             <span>Ventas Próximas Funciones</span>
                         </h2>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                        {proximasFunciones.slice(0, 5).map((func: any) => (
-                            <OccupationGauge
-                                key={func.id}
-                                total={func.vendidas || 0}
-                                capacity={func.capacidadSala || 0}
-                                title={func.obra.nombre}
-                                subtitle={`${func.salaNombre}, ${func.ciudad}`}
-                            />
-                        ))}
+                        {proximasFunciones.slice(0, 5).map((func: any) => {
+                            const dateObj = new Date(func.fecha);
+                            const day = String(dateObj.getDate()).padStart(2, '0');
+                            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                            const formattedDate = `${day}/${month}`;
+
+                            return (
+                                <OccupationGauge
+                                    key={func.id}
+                                    total={func.vendidas || 0}
+                                    capacity={func.capacidadSala || 0}
+                                    title={func.obra.nombre}
+                                    subtitle={`${func.salaNombre}, ${func.ciudad}`}
+                                    date={formattedDate}
+                                />
+                            );
+                        })}
                     </div>
                 </div>
             )}
