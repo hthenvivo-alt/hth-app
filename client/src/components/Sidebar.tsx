@@ -44,10 +44,8 @@ const Sidebar: React.FC = () => {
         <div className="fixed left-0 top-0 h-full w-64 bg-[#121212] border-r border-white/5 flex flex-col z-50">
             <div className="p-6">
                 <div className="flex items-center space-x-3 mb-10">
-                    <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center shadow-lg shadow-primary-500/20">
-                        <span className="text-white font-bold text-xl">H</span>
-                    </div>
-                    <span className="text-xl font-bold tracking-tight">HTH App</span>
+                    <img src="/logo_hth.png" alt="HTH Logo" className="w-10 h-10 object-contain rounded-lg" />
+                    <span className="text-xl font-bold tracking-tight">HTH Gestión</span>
                 </div>
 
                 <nav className="space-y-2">
