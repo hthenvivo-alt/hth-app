@@ -237,8 +237,12 @@ const GastosList: React.FC<Props> = ({ obraId, funcionId }) => {
                                 )}
 
                                 <button
-                                    onClick={() => deleteMutation.mutate(g.id)}
-                                    className="opacity-0 group-hover:opacity-100 p-2 text-gray-700 hover:text-red-500 transition-all ml-1"
+                                    onClick={() => {
+                                        if (window.confirm('¿Estás seguro de que deseas eliminar este gasto?')) {
+                                            deleteMutation.mutate(g.id);
+                                        }
+                                    }}
+                                    className="p-2 text-gray-700 hover:text-red-500 transition-all ml-1"
                                     title="Eliminar gasto"
                                 >
                                     <Trash2 size={14} />

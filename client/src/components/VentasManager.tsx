@@ -156,8 +156,13 @@ const VentasManager: React.FC<Props> = ({ funcionId }) => {
                         <div className="flex items-center gap-4">
                             <span className="text-sm font-black text-primary-400">${parseFloat(v.facturacionBruta || 0).toLocaleString('es-AR')}</span>
                             <button
-                                onClick={() => deleteMutation.mutate(v.id)}
-                                className="opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-red-500 transition-all"
+                                onClick={() => {
+                                    if (window.confirm('¿Estás seguro de que deseas eliminar este registro de venta?')) {
+                                        deleteMutation.mutate(v.id);
+                                    }
+                                }}
+                                className="p-2 text-gray-500 hover:text-red-500 transition-all"
+                                title="Eliminar registro"
                             >
                                 <Trash2 size={14} />
                             </button>
