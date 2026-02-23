@@ -71,7 +71,7 @@ export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
         ],
         theme: 'grid',
         styles: { fontSize: 10, cellPadding: 3 },
-        columnStyles: { 0: { fontStyle: 'bold', width: 40 } }
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } }
     });
 
     y = (doc as any).lastAutoTable.finalY + 15;
@@ -131,7 +131,7 @@ export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
         ],
         theme: 'grid',
         styles: { fontSize: 9, cellPadding: 3 },
-        columnStyles: { 0: { fontStyle: 'bold', width: 40 } }
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } }
     });
 
     y = (doc as any).lastAutoTable.finalY + 15;
