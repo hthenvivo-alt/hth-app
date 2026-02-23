@@ -161,7 +161,7 @@ const VentasManager: React.FC<Props> = ({ funcionId }) => {
                                         deleteMutation.mutate(v.id);
                                     }
                                 }}
-                                className="p-2 text-gray-500 hover:text-red-500 transition-all"
+                                className="p-2 text-red-500/50 hover:text-red-500 transition-all"
                                 title="Eliminar registro"
                             >
                                 <Trash2 size={14} />

@@ -242,7 +242,7 @@ const GastosList: React.FC<Props> = ({ obraId, funcionId }) => {
                                             deleteMutation.mutate(g.id);
                                         }
                                     }}
-                                    className="p-2 text-gray-700 hover:text-red-500 transition-all ml-1"
+                                    className="p-2 text-red-500/50 hover:text-red-500 transition-all ml-1"
                                     title="Eliminar gasto"
                                 >
                                     <Trash2 size={14} />
