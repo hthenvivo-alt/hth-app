@@ -103,7 +103,7 @@ export const getAgentFunciones = async (req: AuthRequest, res: Response) => {
         const funciones = await prisma.funcion.findMany({
             include: {
                 obra: { select: { nombre: true } },
-                liquidacion: { select: { recaucadionBruta: true, confirmada: true } }
+                liquidacion: { select: { recaudacionBruta: true, confirmada: true } }
             },
             orderBy: { fecha: 'desc' }
         });
@@ -119,7 +119,7 @@ export const getAgentFunciones = async (req: AuthRequest, res: Response) => {
             porcentajeOcupacion: f.capacidadSala && f.capacidadSala > 0
                 ? Math.round((f.vendidas / f.capacidadSala) * 100)
                 : 0,
-            ingresoBruto: f.liquidacion?.recaucadionBruta || 0,
+            ingresoBruto: f.liquidacion?.recaudacionBruta || 0,
             liquidacionConfirmada: f.liquidacion?.confirmada || false
         }));
 
@@ -142,7 +142,7 @@ export const getAgentFuncionDetail = async (req: AuthRequest, res: Response) => 
 
     try {
         const funcion = await prisma.funcion.findUnique({
-            where: { id },
+            where: { id: id as string },
             include: {
                 obra: {
                     include: {

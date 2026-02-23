@@ -550,13 +550,83 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                     </div>
                 </section>
 
-                {/* 4. Group Expenses Editor */}
-                <section>
+                {/* 4. Group Deductions & Expenses Editor */}
+                <section className="space-y-8">
                     <div className="bg-[#121212] border border-white/5 rounded-3xl overflow-hidden p-8">
                         <div className="flex justify-between items-center mb-8">
                             <div className="flex items-center gap-3">
                                 <Plus size={20} className="text-gray-500" />
-                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Gastos y Ajustes del Período</h3>
+                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Deducciones del Período (Ajustes)</h3>
+                            </div>
+                            <button
+                                onClick={() => setItems([...items, { tipo: 'Deduccion', concepto: '', monto: '', isGroupLevel: true }])}
+                                className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-400 transition-all border border-red-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+                            >
+                                <Plus size={16} />
+                                Agregar Deducción
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {items.filter(i => i.tipo === 'Deduccion').map((item, idx) => {
+                                const actualIdx = items.indexOf(item);
+                                return (
+                                    <div key={`ded-${idx}`} className="flex gap-4 items-center bg-white/5 p-5 rounded-2xl group border border-white/5 hover:border-white/10 transition-all">
+                                        <div className="flex-1 flex flex-col gap-1">
+                                            <input
+                                                type="text"
+                                                value={item.concepto}
+                                                onChange={(e) => updateItem(actualIdx, 'concepto', e.target.value)}
+                                                placeholder="Descripción"
+                                                className="bg-transparent border-none text-xs font-black text-white p-0 uppercase focus:ring-0 placeholder:text-gray-700"
+                                            />
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={item.porcentaje}
+                                                    onChange={(e) => updateItem(actualIdx, 'porcentaje', e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-12 bg-transparent border-none text-[10px] font-bold text-gray-500 p-0 focus:ring-0 italic"
+                                                />
+                                                <span className="text-[10px] text-gray-700 font-black">%</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+                                            <span className="text-xs text-gray-600 font-bold">$</span>
+                                            <input
+                                                type="text"
+                                                value={item.monto}
+                                                onChange={(e) => updateItem(actualIdx, 'monto', e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const result = evaluateArithmetic(String(item.monto));
+                                                        if (result !== null) updateItem(actualIdx, 'monto', result);
+                                                    }
+                                                }}
+                                                onBlur={() => {
+                                                    const result = evaluateArithmetic(String(item.monto));
+                                                    if (result !== null) updateItem(actualIdx, 'monto', result);
+                                                }}
+                                                className="w-24 bg-transparent border-none text-right text-sm font-black text-white p-0 focus:ring-0"
+                                                placeholder="0,00"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => setItems(items.filter((_, i) => i !== actualIdx))}
+                                            className="p-2 text-gray-500 hover:text-red-500 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="bg-[#121212] border border-white/5 rounded-3xl overflow-hidden p-8">
+                        <div className="flex justify-between items-center mb-8">
+                            <div className="flex items-center gap-3">
+                                <Plus size={20} className="text-gray-500" />
+                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Gastos del Período (Ajustes)</h3>
                             </div>
                             <button
                                 onClick={() => setItems([...items, { tipo: 'Gasto', concepto: '', monto: '', isGroupLevel: true }])}
@@ -570,7 +640,7 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                             {items.filter(i => i.tipo === 'Gasto').map((item, idx) => {
                                 const actualIdx = items.indexOf(item);
                                 return (
-                                    <div key={idx} className="flex gap-4 items-center bg-white/5 p-5 rounded-2xl group border border-white/5 hover:border-white/10 transition-all">
+                                    <div key={`gst-${idx}`} className="flex gap-4 items-center bg-white/5 p-5 rounded-2xl group border border-white/5 hover:border-white/10 transition-all">
                                         <input
                                             type="text"
                                             value={item.concepto}
@@ -600,7 +670,7 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                                         </div>
                                         <button
                                             onClick={() => setItems(items.filter((_, i) => i !== actualIdx))}
-                                            className="opacity-0 group-hover:opacity-100 p-2 text-gray-600 hover:text-red-500 transition-all"
+                                            className="p-2 text-gray-500 hover:text-red-500 transition-colors"
                                         >
                                             <Trash2 size={16} />
                                         </button>

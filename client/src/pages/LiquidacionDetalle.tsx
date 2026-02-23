@@ -703,7 +703,7 @@ const LiquidacionDetalle: React.FC = () => {
                                         <div key={idx} className="flex gap-3 items-center group">
                                             <button
                                                 onClick={() => removeItem(idx)}
-                                                className="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="text-gray-500 hover:text-red-500 transition-colors"
                                             >
                                                 <Trash2 size={16} />
                                             </button>
@@ -831,7 +831,7 @@ const LiquidacionDetalle: React.FC = () => {
                                 const realIdx = items.indexOf(item);
                                 return (
                                     <div key={idx} className="flex gap-2 items-center group">
-                                        <button onClick={() => removeItem(realIdx)} className="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => removeItem(realIdx)} className="text-gray-500 hover:text-red-500 transition-colors">
                                             <Trash2 size={16} />
                                         </button>
                                         <input
