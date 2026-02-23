@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getLiquidacionByFuncion, upsertLiquidacion, uploadBordereaux, getLastExpensesByObra, uploadComprobantesFiles, getComprobantes, createLiquidacionGrupal, getLiquidacionGrupal, deleteLiquidacionGrupal, listLiquidacionesGrupales, addLiquidacionGrupalItem, deleteLiquidacionGrupalItem, upsertLiquidacionGrupal } from '../controllers/liquidacion.js';
+import { getLiquidacionByFuncion, upsertLiquidacion, uploadBordereaux, getLastExpensesByObra, getLiquidacionSuggestions, uploadComprobantesFiles, getComprobantes, createLiquidacionGrupal, getLiquidacionGrupal, deleteLiquidacionGrupal, listLiquidacionesGrupales, addLiquidacionGrupalItem, deleteLiquidacionGrupalItem, upsertLiquidacionGrupal } from '../controllers/liquidacion.js';
 import { authenticate } from '../middleware/auth.js';
 import { upload, uploadComprobantes } from '../middleware/upload.js';
 
@@ -17,6 +17,7 @@ router.post('/:funcionId', authenticate, upsertLiquidacion);
 router.post('/:funcionId/upload-bordereaux', authenticate, upload.single('bordereaux'), uploadBordereaux);
 router.post('/:funcionId/comprobantes', authenticate, uploadComprobantes.array('comprobantes'), uploadComprobantesFiles);
 router.get('/:funcionId/comprobantes', authenticate, getComprobantes);
+router.get('/suggestions/:funcionId', authenticate, getLiquidacionSuggestions);
 router.get('/obra/:obraId/last-expenses', authenticate, getLastExpensesByObra);
 
 export default router;

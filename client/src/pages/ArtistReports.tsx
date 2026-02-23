@@ -21,6 +21,7 @@ const ArtistReports: React.FC = () => {
     const { user } = useAuth();
     const isAdmin = user?.rol === 'Administrador' || user?.rol === 'Admin';
     const isProductor = user?.rol === 'Productor';
+    const isArtista = user?.rol === 'Artista';
     const canFilter = isAdmin || isProductor;
     const [selectedObraId, setSelectedObraId] = useState<string>('all');
     const [selectedFuncionForChart, setSelectedFuncionForChart] = useState<any>(null);
@@ -149,10 +150,12 @@ const ArtistReports: React.FC = () => {
 
                                     {/* Column 4: Revenue & Link */}
                                     <div className="flex flex-col items-end min-w-[150px] space-y-2 border-l border-white/5 md:pl-10">
-                                        <div className="text-right">
-                                            <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest block mb-0.5">Recaudación Bruta</span>
-                                            <span className="text-xl font-black text-white">$ {Number(f.ultimaFacturacionBruta || 0).toLocaleString('es-AR')}</span>
-                                        </div>
+                                        {!isArtista && (
+                                            <div className="text-right">
+                                                <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest block mb-0.5">Recaudación Bruta</span>
+                                                <span className="text-xl font-black text-white">$ {Number(f.ultimaFacturacionBruta || 0).toLocaleString('es-AR')}</span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-2 text-[8px] font-black text-gray-700 uppercase tracking-widest">
                                             <Clock size={10} />
                                             {formatDateTime(f.ultimaActualizacionVentas)}

@@ -92,6 +92,49 @@ export const getLastExpensesByObra = async (req: AuthRequest, res: Response) => 
     }
 };
 
+export const getLiquidacionSuggestions = async (req: AuthRequest, res: Response) => {
+    const funcionId = req.params.funcionId as string;
+    try {
+        const currentFuncion = await prisma.funcion.findUnique({
+            where: { id: funcionId },
+            select: { obraId: true, salaNombre: true, fecha: true }
+        });
+
+        if (!currentFuncion) {
+            return res.status(404).json({ error: 'Función no encontrada' });
+        }
+
+        const lastLiquidacion = await prisma.liquidacion.findFirst({
+            where: {
+                funcion: {
+                    obraId: currentFuncion.obraId,
+                    salaNombre: currentFuncion.salaNombre,
+                    fecha: {
+                        lt: currentFuncion.fecha
+                    }
+                }
+            },
+            orderBy: {
+                funcion: {
+                    fecha: 'desc'
+                }
+            },
+            include: {
+                items: true
+            }
+        });
+
+        if (!lastLiquidacion) {
+            return res.json([]);
+        }
+
+        res.json(lastLiquidacion.items);
+    } catch (error) {
+        console.error('Error fetching liquidacion suggestions:', error);
+        res.status(500).json({ error: 'Error fetching suggestions' });
+    }
+};
+
 export const upsertLiquidacion = async (req: AuthRequest, res: Response) => {
     const funcionId = req.params.funcionId as string;
     const data = req.body;

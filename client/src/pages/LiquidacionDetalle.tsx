@@ -85,13 +85,13 @@ const LiquidacionDetalle: React.FC = () => {
         enabled: !!funcionId
     });
 
-    const { data: lastExpenses } = useQuery({
-        queryKey: ['lastExpenses', funcion?.obraId],
+    const { data: liquidacionSuggestions } = useQuery({
+        queryKey: ['liquidacionSuggestions', funcionId],
         queryFn: async () => {
-            const res = await api.get(`/liquidacion/obra/${funcion?.obraId}/last-expenses`);
+            const res = await api.get(`/liquidacion/suggestions/${funcionId}`);
             return res.data;
         },
-        enabled: !!funcion?.obraId && (!existingLiquidacion || !existingLiquidacion.items)
+        enabled: !!funcionId && (!existingLiquidacion || !existingLiquidacion.items)
     });
 
     // Financial State
@@ -178,8 +178,8 @@ const LiquidacionDetalle: React.FC = () => {
                 }
             }
             setItems(fetchedItems);
-        } else if (lastExpenses) {
-            // Priority 2: New Settlement (Defaults from Obra and Function Monitoreo)
+        } else if (liquidacionSuggestions && liquidacionSuggestions.length > 0) {
+            // Priority 2: New Settlement (Suggestions from previous function same Obra/Sala)
             setFacturacionTotal(Number(funcion.ultimaFacturacionBruta) || 0);
             setVendidas(Number(funcion.vendidas) || 0);
 
@@ -194,24 +194,38 @@ const LiquidacionDetalle: React.FC = () => {
                 })));
             }
 
-            const suggestedGastos = (lastExpenses || [])
-                .filter((concepto: string) => concepto !== 'Gastos de Caja (Registro)')
-                .map((concepto: string) => ({
-                    tipo: 'Gasto',
-                    concepto,
-                    porcentaje: '',
-                    monto: ''
-                }));
+            const suggestedItems = liquidacionSuggestions.map((item: any) => ({
+                tipo: item.tipo,
+                concepto: item.concepto,
+                porcentaje: item.tipo === 'Deduccion' ? (item.porcentaje ? Number(item.porcentaje) : '') : '',
+                monto: item.tipo === 'Gasto' ? '' : (item.tipo === 'Deduccion' && !item.porcentaje ? Number(item.monto) : '')
+            })).filter((i: any) => i.concepto !== 'Gastos de Caja (Registro)');
 
-            const initialDeductions = [
-                { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: 10, monto: '' },
+            setItems(suggestedItems);
+        } else {
+            // Priority 3: Fallback defaults
+            setFacturacionTotal(Number(funcion.ultimaFacturacionBruta) || 0);
+            setVendidas(Number(funcion.vendidas) || 0);
+
+            if (funcion?.obra?.artistaPayouts) {
+                setRepartos((funcion?.obra?.artistaPayouts || []).map((p: any) => ({
+                    nombreArtista: p.nombre,
+                    porcentaje: Number(p.porcentaje),
+                    base: p.base || 'Utilidad',
+                    monto: 0,
+                    retencionAAA: 0,
+                    aplicaAAA: true
+                })));
+            }
+
+            // Default deductions if no suggestions
+            const defaultItems: LiquidacionItem[] = [
+                { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '' },
                 { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '' }
             ];
-
-            const finalItems = [...initialDeductions, ...suggestedGastos];
-            setItems(finalItems);
+            setItems(defaultItems);
         }
-    }, [funcion, existingLiquidacion, lastExpenses]);
+    }, [funcion, existingLiquidacion, liquidacionSuggestions]);
 
     // Calculations
     const valFacturacionTotal = safeEvaluate(facturacionTotal);
