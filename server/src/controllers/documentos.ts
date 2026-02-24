@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { Readable } from 'stream';
 import {
     createObraDriveFolder,
     uploadFileToDrive,
@@ -122,6 +123,3 @@ export const searchAllDocuments = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ error: error.message });
     }
 };
-
-// Also need Readable for the buffer stream
-import { Readable } from 'stream';

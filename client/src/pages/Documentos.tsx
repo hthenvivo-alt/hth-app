@@ -112,6 +112,10 @@ const Documentos: React.FC = () => {
             setSelectedFile(null);
             setUploadData({ tipo: 'Contrato', nombre: '' });
             queryClient.invalidateQueries({ queryKey: ['documentos', selectedObraId] });
+        },
+        onError: (error: any) => {
+            console.error('Upload Error:', error);
+            alert(`Error al subir documento: ${error?.response?.data?.error || error.message}`);
         }
     });
 

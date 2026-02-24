@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import {
     getGoogleAuthUrl,
-    createOAuth2Client
+    createOAuth2Client,
+    getAuthClientForUser
 } from '../services/googleService.js';
 import prisma from '../lib/prisma.js';
 import { AuthRequest } from '../middleware/auth.js';
@@ -52,7 +53,56 @@ export const getStatus = async (req: AuthRequest, res: Response) => {
         }
     });
 
-    res.json({ isLinked: !!user?.googleRefreshToken });
+    if (!user?.googleRefreshToken) {
+        return res.json({ isLinked: false });
+    }
+
+    try {
+        // Active check: Try to refresh/get token
+        const client = await getAuthClientForUser(userId);
+        await client.getAccessToken();
+        res.json({ isLinked: true });
+    } catch (error: any) {
+        const errorMsg = error.message || '';
+        const isInvalid = errorMsg.includes('invalid_grant') ||
+            (error.response?.data?.error === 'invalid_grant');
+
+        if (isInvalid) {
+            // Token is dead, clear it to stay in sync
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    googleAccessToken: null,
+                    googleRefreshToken: null,
+                    googleTokenExpiry: null
+                }
+            });
+            return res.json({ isLinked: false });
+        }
+
+        // Other errors (network, etc) we treat as linked but warn
+        res.json({ isLinked: true, warning: 'Check failed but token exists' });
+    }
+};
+
+export const disconnectGoogle = async (req: AuthRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    try {
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                googleAccessToken: null,
+                googleRefreshToken: null,
+                googleTokenExpiry: null
+            }
+        });
+        res.json({ message: 'Cuenta de Google desvinculada correctamente' });
+    } catch (error: any) {
+        console.error('Disconnect error:', error);
+        res.status(500).json({ error: error.message || 'Error al desvincular cuenta' });
+    }
 };
 
 export const syncDrive = async (req: AuthRequest, res: Response) => {

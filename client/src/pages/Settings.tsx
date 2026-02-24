@@ -61,6 +61,22 @@ const Settings: React.FC = () => {
         }
     };
 
+    const handleDisconnect = async () => {
+        if (!window.confirm('¿Seguro que quieres desvincular tu cuenta de Google? Se detendrán las sincronizaciones automáticas.')) return;
+
+        setLinking(true);
+        try {
+            await api.post('/auth/google/disconnect');
+            setMessage({ type: 'success', text: 'Cuenta de Google desvinculada correctamente.' });
+            queryClient.invalidateQueries({ queryKey: ['google-status'] });
+        } catch (error) {
+            console.error('Error disconnecting Google:', error);
+            setMessage({ type: 'error', text: 'No se pudo desvincular la cuenta.' });
+        } finally {
+            setLinking(false);
+        }
+    };
+
     return (
         <div className="p-8 max-w-4xl mx-auto">
             <header className="mb-10">
@@ -140,10 +156,12 @@ const Settings: React.FC = () => {
                                         Las funciones ahora se sincronizarán automáticamente con tu Calendar y los documentos se guardarán en tu Drive.
                                     </p>
                                     <button
+                                        onClick={handleDisconnect}
                                         disabled={linking}
-                                        className="text-gray-500 hover:text-white text-xs font-black uppercase tracking-widest transition-colors"
+                                        className="text-red-500/50 hover:text-red-500 text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-2"
                                     >
-                                        Desvincular cuenta (Próximamente)
+                                        {linking ? <Loader2 size={12} className="animate-spin" /> : null}
+                                        Desvincular cuenta de Google
                                     </button>
                                 </>
                             ) : (
