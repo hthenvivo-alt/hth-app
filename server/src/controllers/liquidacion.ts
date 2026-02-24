@@ -142,14 +142,18 @@ export const upsertLiquidacion = async (req: AuthRequest, res: Response) => {
     // Helper to ensure we send numbers or null to Prisma, avoiding empty strings
     const num = (val: any) => {
         if (val === undefined || val === null || val === '') return 0;
-        const n = Number(String(val).replace(',', '.'));
-        return isNaN(n) ? 0 : n;
+        if (typeof val === 'number') return Math.round(val * 100) / 100;
+        const clean = String(val).replace(/\./g, '').replace(',', '.');
+        const n = Number(clean);
+        return isNaN(n) ? 0 : Math.round(n * 100) / 100;
     };
 
     const nOrNull = (val: any) => {
         if (val === undefined || val === null || val === '') return null;
-        const n = Number(String(val).replace(',', '.'));
-        return isNaN(n) ? null : n;
+        if (typeof val === 'number') return Math.round(val * 100) / 100;
+        const clean = String(val).replace(/\./g, '').replace(',', '.');
+        const n = Number(clean);
+        return isNaN(n) ? null : Math.round(n * 100) / 100;
     };
 
     try {
