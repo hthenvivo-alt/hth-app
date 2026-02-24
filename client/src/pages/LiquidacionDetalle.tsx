@@ -504,8 +504,8 @@ const LiquidacionDetalle: React.FC = () => {
         },
         onError: (error: any) => {
             console.error('Error saving liquidacion:', error);
-            const errMsg = error.response?.data?.error || 'Error al guardar la liquidación. Verifica los datos.';
-            alert(errMsg);
+            const errMsg = error.response?.data?.error || error.message || 'Error al guardar la liquidación. Verifica los datos.';
+            alert(`Fallo al guardar: ${errMsg}`);
         }
     });
 
