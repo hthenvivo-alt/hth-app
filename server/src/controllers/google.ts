@@ -34,10 +34,12 @@ export const googleCallback = async (req: Request, res: Response) => {
             },
         });
 
-        res.redirect('http://localhost:5173/settings?status=success');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/settings?status=success`);
     } catch (error) {
         console.error('Google callback error:', error);
-        res.redirect('http://localhost:5173/settings?status=error');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/settings?status=error`);
     }
 };
 
