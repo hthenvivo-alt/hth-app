@@ -268,23 +268,25 @@ model LiquidacionGrupal {
 }
 
 model LiquidacionGrupalItem {
-  id         String            @id @default(uuid())
-  grupalId   String
-  tipo       String
-  concepto   String
-  porcentaje Decimal?          @db.Decimal(5, 2)
-  monto      Decimal           @db.Decimal(15, 2)
-  grupal     LiquidacionGrupal @relation(fields: [grupalId], references: [id], onDelete: Cascade)
+  id                String            @id @default(uuid())
+  grupalId          String
+  tipo              String
+  concepto          String
+  porcentaje        Decimal?          @db.Decimal(5, 2)
+  monto             Decimal           @db.Decimal(15, 2)
+  deduceAntesDeSala Boolean           @default(true)
+  grupal            LiquidacionGrupal @relation(fields: [grupalId], references: [id], onDelete: Cascade)
 }
 
 model LiquidacionItem {
-  id            String      @id @default(uuid())
-  liquidacionId String
-  tipo          String
-  concepto      String
-  porcentaje    Decimal?    @db.Decimal(5, 2)
-  monto         Decimal     @db.Decimal(15, 2)
-  liquidacion   Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+  id                String      @id @default(uuid())
+  liquidacionId     String
+  tipo              String
+  concepto          String
+  porcentaje        Decimal?    @db.Decimal(5, 2)
+  monto             Decimal     @db.Decimal(15, 2)
+  deduceAntesDeSala Boolean     @default(true)
+  liquidacion       Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
 }
 
 model LiquidacionReparto {

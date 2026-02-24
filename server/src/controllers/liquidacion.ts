@@ -192,7 +192,8 @@ export const upsertLiquidacion = async (req: AuthRequest, res: Response) => {
                             tipo: item.tipo,
                             concepto: item.concepto,
                             porcentaje: nOrNull(item.porcentaje),
-                            monto: num(item.monto)
+                            monto: num(item.monto),
+                            deduceAntesDeSala: item.deduceAntesDeSala ?? true
                         }))
                     },
                     repartos: {
@@ -232,7 +233,8 @@ export const upsertLiquidacion = async (req: AuthRequest, res: Response) => {
                             tipo: item.tipo,
                             concepto: item.concepto,
                             porcentaje: nOrNull(item.porcentaje),
-                            monto: num(item.monto)
+                            monto: num(item.monto),
+                            deduceAntesDeSala: item.deduceAntesDeSala ?? true
                         }))
                     },
                     repartos: {
@@ -552,7 +554,8 @@ export const upsertLiquidacionGrupal = async (req: AuthRequest, res: Response) =
                             tipo: item.tipo,
                             concepto: item.concepto,
                             porcentaje: nOrNull(item.porcentaje),
-                            monto: num(item.monto)
+                            monto: num(item.monto),
+                            deduceAntesDeSala: item.deduceAntesDeSala ?? true
                         }))
                     } : undefined
                 },

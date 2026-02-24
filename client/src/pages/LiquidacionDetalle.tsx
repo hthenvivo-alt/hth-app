@@ -31,6 +31,7 @@ interface LiquidacionItem {
     concepto: string;
     monto: number | string | '';
     porcentaje?: number | string | '';
+    deduceAntesDeSala?: boolean;
 }
 
 interface Comprobante {
@@ -103,9 +104,9 @@ const LiquidacionDetalle: React.FC = () => {
     const [repartos, setRepartos] = useState<LiquidacionReparto[]>([]);
     const [repartoProduccionPorcentaje, setRepartoProduccionPorcentaje] = useState<number | string | ''>(30);
     const [items, setItems] = useState<LiquidacionItem[]>([
-        { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '' },
-        { tipo: 'Deduccion', concepto: 'Sadaic', porcentaje: '', monto: '' },
-        { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '' }
+        { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '', deduceAntesDeSala: true },
+        { tipo: 'Deduccion', concepto: 'Sadaic', porcentaje: '', monto: '', deduceAntesDeSala: true },
+        { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '', deduceAntesDeSala: true }
     ]);
     const [moneda, setMoneda] = useState<'ARS' | 'USD'>('ARS');
     const [tipoCambio, setTipoCambio] = useState<number | string | ''>(1);
@@ -164,7 +165,8 @@ const LiquidacionDetalle: React.FC = () => {
             const fetchedItems = Array.isArray(existingLiquidacion.items) ? existingLiquidacion.items.map((i: any) => ({
                 ...i,
                 porcentaje: i.tipo === 'Gasto' ? '' : (i.porcentaje ? Number(i.porcentaje) || 0 : ''),
-                monto: Number(i.monto) || 0
+                monto: Number(i.monto) || 0,
+                deduceAntesDeSala: i.deduceAntesDeSala ?? true
             })) : [];
 
             // Cash Expenses Integration
@@ -198,7 +200,8 @@ const LiquidacionDetalle: React.FC = () => {
                 tipo: item.tipo,
                 concepto: item.concepto,
                 porcentaje: item.tipo === 'Deduccion' ? (item.porcentaje ? Number(item.porcentaje) : '') : '',
-                monto: item.tipo === 'Gasto' ? '' : (item.tipo === 'Deduccion' && !item.porcentaje ? Number(item.monto) : '')
+                monto: item.tipo === 'Gasto' ? '' : (item.tipo === 'Deduccion' && !item.porcentaje ? Number(item.monto) : ''),
+                deduceAntesDeSala: item.deduceAntesDeSala ?? true
             })).filter((i: any) => i.concepto !== 'Gastos de Caja (Registro)');
 
             setItems(suggestedItems);
@@ -220,8 +223,8 @@ const LiquidacionDetalle: React.FC = () => {
 
             // Default deductions if no suggestions
             const defaultItems: LiquidacionItem[] = [
-                { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '' },
-                { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '' }
+                { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '', deduceAntesDeSala: true },
+                { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '', deduceAntesDeSala: true }
             ];
             setItems(defaultItems);
         }
@@ -254,16 +257,22 @@ const LiquidacionDetalle: React.FC = () => {
     }, [recaudacionBruta]);
 
     // Summary of deductions
-    const totalDeducciones = items
-        .filter(item => item.tipo === 'Deduccion')
+    const totalDeduccionesAntesSalas = items
+        .filter(item => item.tipo === 'Deduccion' && item.deduceAntesDeSala !== false)
         .reduce((acc, item) => acc + safeEvaluate(item.monto), 0);
 
-    const recaudacionNeta = Math.round((recaudacionBruta - totalDeducciones) * 100) / 100;
+    const totalDeduccionesDespuesSalas = items
+        .filter(item => item.tipo === 'Deduccion' && item.deduceAntesDeSala === false)
+        .reduce((acc, item) => acc + safeEvaluate(item.monto), 0);
+
+    const recaudacionNeta = Math.round((recaudacionBruta - totalDeduccionesAntesSalas - totalDeduccionesDespuesSalas) * 100) / 100;
+
+    const netoBaseSala = Math.round((recaudacionBruta - totalDeduccionesAntesSalas) * 100) / 100;
 
     // Agreement with Hall
     const montoAcuerdo = Math.round((acuerdoSobre === 'Bruta'
         ? (recaudacionBruta * valAcuerdoPorcentaje) / 100
-        : (recaudacionNeta * valAcuerdoPorcentaje) / 100) * 100) / 100;
+        : (netoBaseSala * valAcuerdoPorcentaje) / 100) * 100) / 100;
 
     const resultadoCompania = Math.round((recaudacionNeta - montoAcuerdo) * 100) / 100;
 
@@ -445,7 +454,7 @@ const LiquidacionDetalle: React.FC = () => {
     };
 
     const addItem = (tipo: 'Deduccion' | 'Gasto') => {
-        setItems([...items, { tipo, concepto: '', porcentaje: '', monto: '' }]);
+        setItems([...items, { tipo, concepto: '', porcentaje: '', monto: '', deduceAntesDeSala: true }]);
         setTimeout(() => {
             const placeholder = tipo === 'Deduccion' ? 'Descripción' : 'Descripción del gasto';
             const inputs = document.querySelectorAll(`input[placeholder="${placeholder}"]`);
@@ -684,7 +693,7 @@ const LiquidacionDetalle: React.FC = () => {
                     <div className="bg-[#1E1E1E] p-6 rounded-2xl border border-white/5">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-bold flex items-center gap-2">
-                                <FileText size={20} className="text-red-400" /> Deducciones de Sala
+                                <FileText size={20} className="text-red-400" /> Deducciones
                             </h3>
                             <button
                                 onClick={() => addItem('Deduccion')}
@@ -755,6 +764,16 @@ const LiquidacionDetalle: React.FC = () => {
                                                         }}
                                                     />
                                                 </div>
+                                            </div>
+                                            <div className="flex flex-col items-center justify-center gap-1 min-w-[50px]">
+                                                <label className="text-[8px] font-black uppercase text-gray-500 tracking-wider">Afecta Sala</label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={item.deduceAntesDeSala !== false}
+                                                    onChange={(e) => updateItem(idx, 'deduceAntesDeSala', e.target.checked)}
+                                                    className="w-3.5 h-3.5 rounded border-gray-600 text-primary-500 bg-black/20 focus:ring-primary-500/50 cursor-pointer"
+                                                    title="¿Se descuenta de la base imponible sobre la que cobra la sala?"
+                                                />
                                             </div>
                                         </div>
                                     );

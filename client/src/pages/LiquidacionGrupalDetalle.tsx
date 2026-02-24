@@ -28,6 +28,7 @@ interface Item {
     monto: number | string | '';
     porcentaje?: number | string | '';
     isGroupLevel?: boolean;
+    deduceAntesDeSala?: boolean;
 }
 
 interface Reparto {
@@ -78,14 +79,15 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                 setItems(grupal.items.map((i: any) => ({
                     ...i,
                     monto: Number(i.monto),
-                    porcentaje: i.porcentaje ? Number(i.porcentaje) : ''
+                    porcentaje: i.porcentaje ? Number(i.porcentaje) : '',
+                    deduceAntesDeSala: i.deduceAntesDeSala ?? true
                 })));
             } else {
                 // Default deductions if none exist
                 setItems([
-                    { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '' },
-                    { tipo: 'Deduccion', concepto: 'Sadaic', porcentaje: '', monto: '' },
-                    { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '' }
+                    { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '', deduceAntesDeSala: true },
+                    { tipo: 'Deduccion', concepto: 'Sadaic', porcentaje: '', monto: '', deduceAntesDeSala: true },
+                    { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '', deduceAntesDeSala: true }
                 ]);
             }
         }
@@ -205,9 +207,15 @@ const LiquidacionGrupalDetalle: React.FC = () => {
     const totalGastosGrupo = items.filter(i => i.tipo === 'Gasto').reduce((acc, i) => acc + safeEvaluate(i.monto), 0);
     const totalDeduccionesGrupo = items.filter(i => i.tipo === 'Deduccion').reduce((acc, i) => acc + safeEvaluate(i.monto), 0);
 
+    // Sum Deductions Before Sala (for information if needed, though grupal doesn't calc Sala agreement from scratch)
+    const totalDeduccionesConsolidadasAntesSala = (grupal.liquidaciones || []).reduce((acc: number, l: any) => {
+        return acc + l.items.filter((i: any) => i.tipo === 'Deduccion' && i.deduceAntesDeSala !== false).reduce((sum: number, i: any) => sum + Number(i.monto), 0);
+    }, 0);
+
     const totalRecaudacionNetaReal = totalRecaudacionBrutaReal - (totalDeduccionesConsolidadas + totalDeduccionesGrupo);
 
     const totalMontoSalaReal = (grupal.liquidaciones || []).reduce((acc: number, l: any) => {
+        // Find net deducciones before and after for accurate check, or rely on precalculated Neta vs Compania
         return acc + (Number(l.recaudacionNeta) - Number(l.resultadoCompania));
     }, 0);
 
@@ -289,7 +297,8 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                 tipo: i.tipo,
                 concepto: i.concepto,
                 porcentaje: i.porcentaje === '' ? null : Number(i.porcentaje),
-                monto: Number(i.monto) || 0
+                monto: Number(i.monto) || 0,
+                deduceAntesDeSala: i.deduceAntesDeSala ?? true
             })),
             confirmada: grupal.confirmada
         });
@@ -559,7 +568,7 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                                 <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Deducciones del Período (Ajustes)</h3>
                             </div>
                             <button
-                                onClick={() => setItems([...items, { tipo: 'Deduccion', concepto: '', monto: '', isGroupLevel: true }])}
+                                onClick={() => setItems([...items, { tipo: 'Deduccion', concepto: '', monto: '', isGroupLevel: true, deduceAntesDeSala: true }])}
                                 className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-400 transition-all border border-red-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
                             >
                                 <Plus size={16} />
@@ -610,9 +619,19 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                                                 placeholder="0,00"
                                             />
                                         </div>
+                                        <div className="flex flex-col items-center justify-center gap-1 min-w-[50px] border-l border-white/10 pl-2 ml-2">
+                                            <label className="text-[8px] font-black uppercase text-gray-500 tracking-wider">Afecta Sala</label>
+                                            <input
+                                                type="checkbox"
+                                                checked={item.deduceAntesDeSala !== false}
+                                                onChange={(e) => updateItem(actualIdx, 'deduceAntesDeSala', e.target.checked)}
+                                                className="w-3.5 h-3.5 rounded border-gray-600 text-primary-500 bg-black/20 focus:ring-primary-500/50 cursor-pointer"
+                                                title="¿Se descuenta de la base imponible sobre la que cobra la sala?"
+                                            />
+                                        </div>
                                         <button
                                             onClick={() => setItems(items.filter((_, i) => i !== actualIdx))}
-                                            className="p-2 text-gray-500 hover:text-red-500 transition-colors"
+                                            className="p-2 text-gray-500 hover:text-red-500 transition-colors ml-2"
                                         >
                                             <Trash2 size={16} />
                                         </button>
