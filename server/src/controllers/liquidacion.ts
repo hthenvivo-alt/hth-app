@@ -269,9 +269,9 @@ export const upsertLiquidacion = async (req: AuthRequest, res: Response) => {
         });
 
         res.json(result);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error in upsertLiquidacion:', error);
-        res.status(500).json({ error: 'Error saving liquidacion' });
+        res.status(500).json({ error: `Error al guardar: ${error.message || error}` });
     }
 };
 
