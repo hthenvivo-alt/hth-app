@@ -142,13 +142,13 @@ export const upsertLiquidacion = async (req: AuthRequest, res: Response) => {
     // Helper to ensure we send numbers or null to Prisma, avoiding empty strings
     const num = (val: any) => {
         if (val === undefined || val === null || val === '') return 0;
-        const n = Number(val);
+        const n = Number(String(val).replace(',', '.'));
         return isNaN(n) ? 0 : n;
     };
 
     const nOrNull = (val: any) => {
         if (val === undefined || val === null || val === '') return null;
-        const n = Number(val);
+        const n = Number(String(val).replace(',', '.'));
         return isNaN(n) ? null : n;
     };
 
@@ -255,7 +255,7 @@ export const upsertLiquidacion = async (req: AuthRequest, res: Response) => {
             await tx.funcion.update({
                 where: { id: funcionId },
                 data: {
-                    vendidas: num(data.vendidas),
+                    vendidas: Math.round(num(data.vendidas)),
                     ultimaFacturacionBruta: num(data.facturacionTotal),
                     ultimaActualizacionVentas: new Date()
                 }

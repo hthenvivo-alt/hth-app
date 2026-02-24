@@ -477,7 +477,7 @@ const LiquidacionDetalle: React.FC = () => {
         mutationFn: async (confirmada: boolean) => {
             await api.post(`/liquidacion/${funcionId}`, {
                 facturacionTotal,
-                vendidas,
+                vendidas: Math.round(Number(vendidas) || 0),
                 costosVenta,
                 recaudacionBruta,
                 recaudacionNeta,
