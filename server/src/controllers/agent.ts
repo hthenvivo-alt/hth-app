@@ -78,7 +78,11 @@ export const createAgentFuncion = async (req: AuthRequest, res: Response) => {
 
         // Automated Billboard Announcement (non-blocking)
         try {
-            const dateStr = nuevaFuncion.fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+            const dateStr = nuevaFuncion.fecha.toLocaleDateString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                timeZone: 'America/Argentina/Buenos_Aires'
+            });
             const mensajeContenido = `🤖 **Agente OpenClaw** programó una nueva función:\n**${obra.nombre}** en ${nuevaFuncion.salaNombre} (${nuevaFuncion.ciudad}) para el día **${dateStr}**.`;
 
             await prisma.mensaje.create({

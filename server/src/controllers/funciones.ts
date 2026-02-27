@@ -122,7 +122,11 @@ export const createFuncion = async (req: AuthRequest, res: Response) => {
                 let mensajeContenido = '';
                 if (createdFunciones.length === 1) {
                     const f = createdFunciones[0];
-                    const dateStr = f.fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+                    const dateStr = f.fecha.toLocaleDateString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        timeZone: 'America/Argentina/Buenos_Aires'
+                    });
                     mensajeContenido = `📣 ¡Nueva función programada!\n**${obra.nombre}** en ${f.salaNombre} (${f.ciudad}) para el día **${dateStr}**.`;
                 } else {
                     mensajeContenido = `📣 ¡Nuevas funciones programadas!\nSe han agregado **${createdFunciones.length}** nuevas fechas de **${obra.nombre}** en ${salaNombre} (${ciudad}).`;
