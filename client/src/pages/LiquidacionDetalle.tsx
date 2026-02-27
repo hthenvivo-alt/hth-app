@@ -426,8 +426,36 @@ const LiquidacionDetalle: React.FC = () => {
             alert('Error al subir los comprobantes');
         } finally {
             setUploadingComprobantes(false);
-            // Reset input
             e.target.value = '';
+        }
+    };
+
+    const handleDownloadComprobantesZip = async () => {
+        try {
+            const res = await api.get(`/liquidacion/${funcionId}/comprobantes/download`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Comprobantes_Liquidacion_${funcionId}.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading zip:', error);
+            alert('Error al descargar el archivo ZIP');
+        }
+    };
+
+    const handleDeleteComprobante = async (id: string) => {
+        if (!confirm('¿Estás seguro de que quieres eliminar este comprobante?')) return;
+        try {
+            await api.delete(`/liquidacion/comprobante/${id}`);
+            refetchComprobantes();
+        } catch (error) {
+            console.error('Error deleting comprobante:', error);
+            alert('Error al eliminar el comprobante');
         }
     };
 
@@ -887,6 +915,61 @@ const LiquidacionDetalle: React.FC = () => {
                             <div className="flex justify-between items-center py-2 px-3 bg-white/5 rounded text-sm text-gray-400">
                                 <span>Impuesto Transferencias ({impuestoTransferenciaPorcentaje}%)</span>
                                 <span>{symbol} {impuestoTransferencias.toLocaleString('es-AR')}</span>
+                            </div>
+
+                            {/* Comprobantes Section */}
+                            <div className="mt-6 pt-4 border-t border-white/5 space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-sm font-bold text-gray-300 flex items-center gap-2">
+                                        <FileImage size={16} /> Comprobantes Adjuntos
+                                    </h4>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="file"
+                                            multiple
+                                            className="hidden"
+                                            id={`comprobantes-upload-${funcionId}`}
+                                            onChange={handleComprobantesUpload}
+                                            disabled={uploadingComprobantes}
+                                        />
+                                        <label
+                                            htmlFor={`comprobantes-upload-${funcionId}`}
+                                            className="cursor-pointer flex items-center gap-2 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-white/10"
+                                        >
+                                            {uploadingComprobantes ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                                            Subir
+                                        </label>
+                                        {comprobantes && comprobantes.length > 0 && (
+                                            <button
+                                                onClick={handleDownloadComprobantesZip}
+                                                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded text-xs font-medium transition-colors border border-white/10 text-primary-400 hover:text-primary-300 cursor-pointer"
+                                            >
+                                                <Download size={14} />
+                                                ZIP
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                {comprobantes && comprobantes.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {comprobantes.map((comp: any) => (
+                                            <div key={comp.id} className="flex justify-between items-center bg-black/20 px-3 py-2 rounded text-xs border border-white/5 group">
+                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                    <span className="truncate text-gray-300" title={comp.nombreDocumento}>{comp.nombreDocumento}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteComprobante(comp.id)}
+                                                    className="text-gray-500 hover:text-red-500 ml-2 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity"
+                                                    title="Eliminar"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-500 italic px-1">No hay comprobantes adjuntos</p>
+                                )}
                             </div>
                         </div>
 

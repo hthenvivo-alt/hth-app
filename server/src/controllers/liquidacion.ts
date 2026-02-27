@@ -1,6 +1,9 @@
 import { Response } from 'express';
 import prisma from '../lib/prisma.js';
 import { AuthRequest } from '../middleware/auth.js';
+import fs from 'fs';
+import path from 'path';
+import archiver from 'archiver';
 
 export const getLiquidacionByFuncion = async (req: AuthRequest, res: Response) => {
     const funcionId = req.params.funcionId as string;
@@ -337,6 +340,129 @@ export const getComprobantes = async (req: AuthRequest, res: Response) => {
     } catch (error) {
         console.error('Error fetching comprobantes:', error);
         res.status(500).json({ error: 'Error al obtener los comprobantes' });
+    }
+};
+
+export const downloadComprobantesZip = async (req: AuthRequest, res: Response) => {
+    const funcionId = req.params.funcionId as string;
+
+    try {
+        const liquidacion = await prisma.liquidacion.findUnique({
+            where: { funcionId },
+            include: {
+                comprobantes: true
+            }
+        });
+
+        if (!liquidacion || !liquidacion.comprobantes || liquidacion.comprobantes.length === 0) {
+            return res.status(404).json({ error: 'No hay comprobantes para esta liquidación' });
+        }
+
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        const zipName = `Comprobantes_Liquidacion_${funcionId}.zip`;
+
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename=${zipName}`);
+
+        archive.pipe(res);
+
+        liquidacion.comprobantes.forEach((v: any) => {
+            if (v.linkDrive.startsWith('/uploads/comprobantes/')) {
+                const fileName = path.basename(v.linkDrive);
+                const filePath = path.join(process.cwd(), 'uploads', 'comprobantes', fileName);
+
+                if (fs.existsSync(filePath)) {
+                    archive.file(filePath, { name: v.nombreDocumento });
+                }
+            }
+        });
+
+        await archive.finalize();
+    } catch (error) {
+        console.error('Error downloading vouchers ZIP:', error);
+        res.status(500).json({ error: 'Error al generar el archivo ZIP' });
+    }
+};
+
+export const deleteComprobante = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const documento = await prisma.documento.findUnique({
+            where: { id: id as string }
+        });
+
+        if (!documento) {
+            return res.status(404).json({ error: 'Comprobante no encontrado' });
+        }
+
+        await prisma.documento.delete({
+            where: { id: id as string }
+        });
+
+        if (documento.linkDrive.startsWith('/uploads/comprobantes/')) {
+            const filePath = path.join(process.cwd(), documento.linkDrive);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        res.status(204).send();
+    } catch (error) {
+        console.error('Error deleting comprobante:', error);
+        res.status(500).json({ error: 'Error al eliminar el comprobante' });
+    }
+};
+
+export const downloadGrupalComprobantesZip = async (req: AuthRequest, res: Response) => {
+    const { id: grupalId } = req.params;
+
+    try {
+        const liquidaciones = await prisma.liquidacion.findMany({
+            where: { grupalId: grupalId as string },
+            include: {
+                comprobantes: true,
+                funcion: true
+            }
+        });
+
+        if (!liquidaciones || liquidaciones.length === 0) {
+            return res.status(404).json({ error: 'No se encontraron liquidaciones para este grupo' });
+        }
+
+        const allComprobantes = liquidaciones.flatMap(l =>
+            l.comprobantes.map(c => ({ ...c, funcionFecha: l.funcion.fecha, obraNombre: 'Documento' }))
+        );
+
+        if (allComprobantes.length === 0) {
+            return res.status(404).json({ error: 'No hay comprobantes en ninguna de las liquidaciones del grupo' });
+        }
+
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        const zipName = `Comprobantes_Grupo_${grupalId}.zip`;
+
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename=${zipName}`);
+
+        archive.pipe(res);
+
+        allComprobantes.forEach((v: any, index: number) => {
+            if (v.linkDrive.startsWith('/uploads/comprobantes/')) {
+                const fileName = path.basename(v.linkDrive);
+                const filePath = path.join(process.cwd(), 'uploads', 'comprobantes', fileName);
+
+                if (fs.existsSync(filePath)) {
+                    // Predix with function index or date to avoid name collisions
+                    const prefix = v.funcionFecha ? `${new Date(v.funcionFecha).toISOString().split('T')[0]}_` : `${index}_`;
+                    archive.file(filePath, { name: prefix + v.nombreDocumento });
+                }
+            }
+        });
+
+        await archive.finalize();
+    } catch (error) {
+        console.error('Error downloading group vouchers ZIP:', error);
+        res.status(500).json({ error: 'Error al generar el archivo ZIP del grupo' });
     }
 };
 

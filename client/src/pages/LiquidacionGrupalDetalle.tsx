@@ -324,6 +324,24 @@ const LiquidacionGrupalDetalle: React.FC = () => {
         setItems(newItems);
     };
 
+    const handleDownloadZip = async () => {
+        try {
+            const res = await api.get(`/liquidacion/grupal/${id}/download-vouchers`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Comprobantes_Grupo_${id}.zip`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode?.removeChild(link);
+        } catch (error) {
+            console.error('Error downloading group zip:', error);
+            alert('No hay comprobantes para descargar en este grupo.');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#0f0f0f] pb-20">
             {/* Header */}
@@ -352,6 +370,14 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                         >
                             <Download size={16} />
                             Reporte
+                        </button>
+                        <button
+                            onClick={handleDownloadZip}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 text-primary-400 rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-white/10"
+                            title="Descargar todos los comprobantes de este grupo"
+                        >
+                            <Download size={16} />
+                            ZIP Gastos
                         </button>
                         <button
                             onClick={handleSave}
