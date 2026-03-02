@@ -108,7 +108,7 @@ const LiquidacionDetalle: React.FC = () => {
         { tipo: 'Deduccion', concepto: 'Sadaic', porcentaje: '', monto: '', deduceAntesDeSala: true },
         { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '', deduceAntesDeSala: true }
     ]);
-    const [moneda, setMoneda] = useState<'ARS' | 'USD'>('ARS');
+    const [moneda, setMoneda] = useState<'ARS' | 'USD' | 'EUR'>('ARS');
     const [tipoCambio, setTipoCambio] = useState<number | string | ''>(1);
     const [impuestoTransferenciaPorcentaje, setImpuestoTransferenciaPorcentaje] = useState<number | string | ''>(1.2);
     const [bordereauxImage, setBordereauxImage] = useState<string | null>(null);
@@ -362,7 +362,7 @@ const LiquidacionDetalle: React.FC = () => {
     //     });
     // }, [roundedStableAAA]);
 
-    const symbol = moneda === 'ARS' ? '$' : 'U$D';
+    const symbol = moneda === 'ARS' ? '$' : (moneda === 'USD' ? 'U$D' : '€');
 
     const handleBordereauxUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -644,6 +644,36 @@ const LiquidacionDetalle: React.FC = () => {
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                             <Ticket size={20} className="text-green-500" /> Ingresos
                         </h3>
+                        <div className="flex items-center gap-4 mb-6 p-3 bg-black/20 rounded-xl border border-white/5">
+                            <div className="flex-1">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Moneda</label>
+                                <select
+                                    value={moneda}
+                                    onChange={(e) => {
+                                        const newMoneda = e.target.value as any;
+                                        setMoneda(newMoneda);
+                                        if (newMoneda === 'ARS') setTipoCambio(1);
+                                    }}
+                                    className="w-full bg-transparent border-none text-sm font-bold focus:ring-0 cursor-pointer"
+                                >
+                                    <option value="ARS">Pesos (ARS)</option>
+                                    <option value="USD">Dólares (USD)</option>
+                                    <option value="EUR">Euros (EUR)</option>
+                                </select>
+                            </div>
+                            {moneda !== 'ARS' && (
+                                <div className="flex-1 border-l border-white/10 pl-4">
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Tipo de Cambio</label>
+                                    <input
+                                        type="text"
+                                        value={tipoCambio}
+                                        onChange={(e) => setTipoCambio(e.target.value)}
+                                        placeholder="1.00"
+                                        className="w-full bg-transparent border-none text-sm font-bold focus:ring-0"
+                                    />
+                                </div>
+                            )}
+                        </div>
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -668,7 +698,7 @@ const LiquidacionDetalle: React.FC = () => {
                                 <div>
                                     <label className="block text-xs font-medium text-gray-400 mb-1">Costo Tarjetas / Venta</label>
                                     <div className="relative">
-                                        <span className="absolute left-3 top-2 text-gray-500">$</span>
+                                        <span className="absolute left-3 top-2 text-gray-500">{symbol}</span>
                                         <input
                                             type="text"
                                             value={costosVenta}
@@ -691,7 +721,7 @@ const LiquidacionDetalle: React.FC = () => {
                             <div>
                                 <label className="block text-xs font-medium text-gray-400 mb-1">Venta Total Bruta</label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-2 text-gray-500">$</span>
+                                    <span className="absolute left-3 top-2 text-gray-500">{symbol}</span>
                                     <input
                                         type="text"
                                         value={facturacionTotal}
@@ -713,7 +743,7 @@ const LiquidacionDetalle: React.FC = () => {
 
                             <div className="border-t border-white/5 pt-4 mt-4 flex justify-between items-center font-bold text-lg text-green-400">
                                 <span>Recaudación Bruta</span>
-                                <span>{symbol} {recaudacionBruta.toLocaleString('es-AR')}</span>
+                                <span>{symbol} {recaudacionBruta.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>
@@ -812,7 +842,7 @@ const LiquidacionDetalle: React.FC = () => {
                             <div className="border-t border-white/5 pt-4 mt-4 space-y-2">
                                 <div className="flex justify-between items-center font-bold text-lg text-primary-400">
                                     <span>Recaudación Neta</span>
-                                    <span>{symbol} {recaudacionNeta.toLocaleString('es-AR')}</span>
+                                    <span>{symbol} {recaudacionNeta.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
                         </div>
@@ -855,11 +885,11 @@ const LiquidacionDetalle: React.FC = () => {
                         </div>
                         <div className="flex justify-between items-center text-gray-400 mb-2">
                             <span>Monto Sala</span>
-                            <span>{symbol} {montoAcuerdo.toLocaleString('es-AR')}</span>
+                            <span>{symbol} {montoAcuerdo.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-white/5">
                             <span className="text-gray-400">Compañía HTH</span>
-                            <span>{symbol} {resultadoCompania.toLocaleString('es-AR')}</span>
+                            <span>{symbol} {resultadoCompania.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                     </div>
 
@@ -914,7 +944,7 @@ const LiquidacionDetalle: React.FC = () => {
 
                             <div className="flex justify-between items-center py-2 px-3 bg-white/5 rounded text-sm text-gray-400">
                                 <span>Impuesto Transferencias ({impuestoTransferenciaPorcentaje}%)</span>
-                                <span>{symbol} {impuestoTransferencias.toLocaleString('es-AR')}</span>
+                                <span>{symbol} {impuestoTransferencias.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
 
                             {/* Comprobantes Section */}
@@ -982,7 +1012,7 @@ const LiquidacionDetalle: React.FC = () => {
                             {!isRevenueOnly && (
                                 <div className="text-right">
                                     <span className="block text-[10px] text-gray-500 uppercase font-bold tracking-widest">Resultado a Repartir</span>
-                                    <span className="text-2xl font-black text-white">{symbol} {rawResultadoFuncion.toLocaleString('es-AR')}</span>
+                                    <span className="text-2xl font-black text-white">{symbol} {rawResultadoFuncion.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                             )}
                         </div>
@@ -995,7 +1025,7 @@ const LiquidacionDetalle: React.FC = () => {
                                             <span className="font-bold text-white uppercase tracking-tight">{reparto.nombreArtista}</span>
                                             <span className="text-[10px] text-gray-500 uppercase font-bold">{reparto.porcentaje}% sobre {reparto.base}</span>
                                         </div>
-                                        <span className="font-black text-white">{symbol} {reparto.monto.toLocaleString('es-AR')}</span>
+                                        <span className="font-black text-white">{symbol} {reparto.monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
                                         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Retención AAA</span>
@@ -1022,7 +1052,7 @@ const LiquidacionDetalle: React.FC = () => {
                                     </div>
                                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-primary-400">
                                         <span>Saldo Neto</span>
-                                        <span>{symbol} {(reparto.monto - safeEvaluate(reparto.retencionAAA)).toLocaleString('es-AR')}</span>
+                                        <span>{symbol} {(reparto.monto - safeEvaluate(reparto.retencionAAA)).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             ))}
@@ -1034,7 +1064,7 @@ const LiquidacionDetalle: React.FC = () => {
                                         <span className="font-bold text-white uppercase tracking-tight">HTH PRODUCCIÓN / GESTIÓN</span>
                                         <span className="text-[10px] text-gray-500 uppercase font-bold">{calcRepartoProduccionPorcentaje}% sobre Utilidad</span>
                                     </div>
-                                    <span className="font-black text-white">{symbol} {repartoProduccionMonto.toLocaleString('es-AR')}</span>
+                                    <span className="font-black text-white">{symbol} {repartoProduccionMonto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
                         </div>

@@ -81,8 +81,8 @@ const FinancialSummary: React.FC<Props> = ({ funcionId }) => {
                     <div>
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Ingresos Totales (Bruto)</p>
                         <h4 className="text-4xl font-black text-white">
-                            <span className="text-green-500 mr-2">$</span>
-                            {totalRevenue.toLocaleString('es-AR')}
+                            <span className="text-green-500 mr-2">{funcion?.liquidacion?.moneda === 'EUR' ? '€' : (funcion?.liquidacion?.moneda === 'USD' ? 'U$D' : '$')}</span>
+                            {totalRevenue.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </h4>
                     </div>
                 </div>

@@ -171,7 +171,7 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
     const fechaStr = `${day}/${month}/${year}`;
-    const symbol = liqData.moneda === 'ARS' ? '$' : 'U$D';
+    const symbol = liqData.moneda === 'ARS' ? '$' : (liqData.moneda === 'USD' ? 'U$D' : '€');
 
     // COLORS
     const primary = [220, 38, 38]; // HTH Red
@@ -518,7 +518,7 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
 export const generateBatchLiquidacionPDF = async (data: any) => {
     const { grupal } = data;
     const doc = new jsPDF();
-    const symbol = '$';
+    const symbol = grupal.moneda === 'ARS' ? '$' : (grupal.moneda === 'USD' ? 'U$D' : '€');
     const primary = [220, 38, 38];
     const dark = [30, 30, 30];
 

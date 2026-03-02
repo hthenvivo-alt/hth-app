@@ -22,6 +22,7 @@ interface Funcion {
         resultadoFuncion: number;
         recaudacionBruta: number;
         repartoProduccionMonto: number | null;
+        moneda: 'ARS' | 'USD' | 'EUR';
     } | null;
 }
 
@@ -108,15 +109,35 @@ const Liquidacion: React.FC = () => {
         return new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(new Date(Number(year), Number(month) - 1));
     };
 
-    const rentabilidadMensual = funciones?.filter(f => {
-        const d = new Date(f.fecha);
-        if (isNaN(d.getTime())) return false;
-        const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        return m === selectedMonth && f.liquidacion?.confirmada;
-    }).reduce((acc, f) => {
-        const hthResult = Number(f.liquidacion?.repartoProduccionMonto) || Number(f.liquidacion?.resultadoFuncion) || 0;
-        return acc + hthResult;
-    }, 0) || 0;
+    const rentabilidadMensualByCurrency = React.useMemo(() => {
+        const totals: Record<string, number> = { ARS: 0, USD: 0, EUR: 0 };
+        funciones?.filter(f => {
+            const d = new Date(f.fecha);
+            if (isNaN(d.getTime())) return false;
+            const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            return m === selectedMonth && f.liquidacion?.confirmada;
+        }).forEach(f => {
+            const moneda = f.liquidacion?.moneda || 'ARS';
+            const hthResult = Number(f.liquidacion?.repartoProduccionMonto) || Number(f.liquidacion?.resultadoFuncion) || 0;
+            totals[moneda] = (totals[moneda] || 0) + hthResult;
+        });
+        return totals;
+    }, [funciones, selectedMonth]);
+
+    const rentabilidadAcumuladaByCurrency = React.useMemo(() => {
+        const totals: Record<string, number> = { ARS: 0, USD: 0, EUR: 0 };
+        funciones?.filter(f => f.liquidacion?.confirmada).forEach(f => {
+            const moneda = f.liquidacion?.moneda || 'ARS';
+            const hthResult = Number(f.liquidacion?.repartoProduccionMonto) || Number(f.liquidacion?.resultadoFuncion) || 0;
+            totals[moneda] = (totals[moneda] || 0) + hthResult;
+        });
+        return totals;
+    }, [funciones]);
+
+    const formatCurrency = (amount: number, moneda: string) => {
+        const symbol = moneda === 'ARS' ? '$' : (moneda === 'USD' ? 'U$D' : '€');
+        return `${symbol} ${amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
 
     const pendientes = activeFunciones.length;
 
@@ -126,18 +147,34 @@ const Liquidacion: React.FC = () => {
         const confirmedFunciones = closedFunciones
             .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
 
-        const reportData = confirmedFunciones.map(f => ({
-            'Fecha': formatDate(f.fecha),
-            'Obra': f.obra?.nombre || '---',
-            'Lugar': `${f.salaNombre}, ${f.ciudad}`,
-            'Entradas Vendidas': f.vendidas,
-            'Recaudación Bruta': f.liquidacion?.recaudacionBruta ? Number(f.liquidacion.recaudacionBruta) : 0,
-            'Resultado HTH': (Number(f.liquidacion?.repartoProduccionMonto) || Number(f.liquidacion?.resultadoFuncion) || 0)
-        }));
-
-        const ws = XLSX.utils.json_to_sheet(reportData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Informe de Funciones");
+
+        const currencies = ['ARS', 'USD', 'EUR'] as const;
+
+        currencies.forEach(curr => {
+            const dataForCurrency = confirmedFunciones
+                .filter(f => (f.liquidacion?.moneda || 'ARS') === curr)
+                .map(f => ({
+                    'Fecha': formatDate(f.fecha),
+                    'Obra': f.obra?.nombre || '---',
+                    'Lugar': `${f.salaNombre}, ${f.ciudad}`,
+                    'Entradas Vendidas': f.vendidas,
+                    'Recaudación Bruta': f.liquidacion?.recaudacionBruta ? Number(f.liquidacion.recaudacionBruta) : 0,
+                    'Resultado HTH': (Number(f.liquidacion?.repartoProduccionMonto) || Number(f.liquidacion?.resultadoFuncion) || 0)
+                }));
+
+            if (dataForCurrency.length > 0) {
+                const ws = XLSX.utils.json_to_sheet(dataForCurrency);
+                XLSX.utils.book_append_sheet(wb, ws, `Funciones ${curr}`);
+            }
+        });
+
+        // Fallback sheet if nothing is confirmed
+        if (wb.SheetNames.length === 0) {
+            const ws = XLSX.utils.json_to_sheet([{ Info: 'No hay liquidaciones cerradas' }]);
+            XLSX.utils.book_append_sheet(wb, ws, "Informe");
+        }
+
         XLSX.writeFile(wb, `Informe_Anual_HTH_${new Date().getFullYear()}.xlsx`);
     };
 
@@ -187,7 +224,9 @@ const Liquidacion: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-5">
                                     <div className="flex flex-col">
-                                        <span className="text-sm font-medium text-gray-300">$ {(func.ultimaFacturacionBruta || 0).toLocaleString('es-AR')} Brutos</span>
+                                        <span className="text-sm font-medium text-gray-300">
+                                            {func.liquidacion?.moneda === 'EUR' ? '€' : (func.liquidacion?.moneda === 'USD' ? 'U$D' : '$')} {(func.ultimaFacturacionBruta || 0).toLocaleString('es-AR')} Brutos
+                                        </span>
                                         <span className="text-[10px] text-gray-500 uppercase font-bold tracking-tight">{func.vendidas} Entradas</span>
                                     </div>
                                 </td>
@@ -265,9 +304,13 @@ const Liquidacion: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    <h3 className="text-3xl font-black tracking-tight mt-3">
-                        $ {rentabilidadMensual.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </h3>
+                    <div className="space-y-1 mt-3">
+                        {Object.entries(rentabilidadMensualByCurrency).filter(([_, amount]) => amount !== 0 || _ === 'ARS').map(([moneda, amount]) => (
+                            <h3 key={moneda} className="text-2xl font-black tracking-tight">
+                                {formatCurrency(amount, moneda)}
+                            </h3>
+                        ))}
+                    </div>
                     <p className="text-[10px] text-gray-600 font-bold uppercase tracking-tighter mt-1">Total Cerrado en el Periodo</p>
                 </div>
 
@@ -285,15 +328,17 @@ const Liquidacion: React.FC = () => {
                         <DollarSign size={20} />
                         <span className="text-sm font-black uppercase tracking-widest opacity-80">Rentabilidad Acumulada</span>
                     </div>
-                    <h3 className="text-3xl font-black tracking-tight mt-3">
-                        $ {(funciones?.reduce((acc, f) => {
-                            const hthResult = Number(f.liquidacion?.repartoProduccionMonto) || Number(f.liquidacion?.resultadoFuncion) || 0;
-                            return acc + hthResult;
-                        }, 0) || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </h3>
+                    <div className="space-y-1 mt-3">
+                        {Object.entries(rentabilidadAcumuladaByCurrency).filter(([_, amount]) => amount !== 0 || _ === 'ARS').map(([moneda, amount]) => (
+                            <h3 key={moneda} className="text-2xl font-black tracking-tight">
+                                {formatCurrency(amount, moneda)}
+                            </h3>
+                        ))}
+                    </div>
                     <p className="text-[10px] text-gray-600 font-bold uppercase tracking-tighter mt-1">Total Histórico Confirmado</p>
                 </div>
             </div>
+
             {/* Batch Settlements Section */}
             {grupales && grupales.length > 0 && (
                 <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-500">

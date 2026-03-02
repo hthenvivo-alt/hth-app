@@ -46,6 +46,8 @@ const LiquidacionGrupalDetalle: React.FC = () => {
 
     const [items, setItems] = React.useState<Item[]>([]);
     const [isSaving, setIsSaving] = React.useState(false);
+    const [moneda, setMoneda] = React.useState<'ARS' | 'USD' | 'EUR'>('ARS');
+    const [tipoCambio, setTipoCambio] = React.useState<number | string | ''>(1);
 
     const { data: grupal, isLoading } = useQuery({
         queryKey: ['liquidacion-grupal', id],
@@ -82,6 +84,8 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                     porcentaje: i.porcentaje ? Number(i.porcentaje) : '',
                     deduceAntesDeSala: i.deduceAntesDeSala ?? true
                 })));
+                setMoneda(grupal.moneda || 'ARS');
+                setTipoCambio(grupal.tipoCambio || 1);
             } else {
                 // Default deductions if none exist
                 setItems([
@@ -113,7 +117,7 @@ const LiquidacionGrupalDetalle: React.FC = () => {
     // CRITICAL: Force calculation to be (Venta - Tarjeta) to fix cases where DB field is wrong
     const totalRecaudacionBrutaReal = totalFacturacion - totalCostosVenta;
 
-    const S = '$';
+    const S = moneda === 'ARS' ? '$' : (moneda === 'USD' ? 'U$D' : '€');
 
     // Consolidate Repartos (Artists) - We gather individual show data first
     const artistData: Record<string, {
@@ -300,7 +304,9 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                 monto: Number(i.monto) || 0,
                 deduceAntesDeSala: i.deduceAntesDeSala ?? true
             })),
-            confirmada: grupal.confirmada
+            confirmada: grupal.confirmada,
+            moneda,
+            tipoCambio
         });
     };
 
@@ -363,6 +369,36 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                         </div>
                     </div>
 
+                    <div className="flex items-center gap-4 bg-black/20 p-2 rounded-xl border border-white/5 mx-4">
+                        <div className="flex flex-col">
+                            <label className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 mb-0.5">Moneda</label>
+                            <select
+                                value={moneda}
+                                onChange={(e) => {
+                                    const newMoneda = e.target.value as any;
+                                    setMoneda(newMoneda);
+                                    if (newMoneda === 'ARS') setTipoCambio(1);
+                                }}
+                                className="bg-transparent border-none text-[10px] font-bold text-white uppercase focus:ring-0 p-0 cursor-pointer"
+                            >
+                                <option value="ARS">ARS</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                        {moneda !== 'ARS' && (
+                            <div className="flex flex-col border-l border-white/10 pl-4">
+                                <label className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 mb-0.5">T. Cambio</label>
+                                <input
+                                    type="text"
+                                    value={tipoCambio}
+                                    onChange={(e) => setTipoCambio(e.target.value)}
+                                    className="bg-transparent border-none text-[10px] font-bold text-white p-0 focus:ring-0 w-12"
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handlePrint}
@@ -404,7 +440,7 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                                 <span>Recaudación Bruta Total</span>
                             </div>
                             <div className="flex items-baseline justify-center md:justify-start gap-2">
-                                <span className="text-3xl font-black text-white">$</span>
+                                <span className="text-3xl font-black text-white">{S}</span>
                                 <span className="text-6xl font-black text-white tracking-tighter">
                                     {totalRecaudacionBrutaReal.toLocaleString('es-AR')}
                                 </span>
