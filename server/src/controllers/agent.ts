@@ -102,6 +102,55 @@ export const createAgentFuncion = async (req: AuthRequest, res: Response) => {
     }
 };
 
+export const updateAgentFuncion = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    const { obraId, fecha, precioBase, salaNombre, ciudad, capacidadSala } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Missing funcion ID' });
+    }
+
+    try {
+        const updateData: any = {};
+        if (obraId) updateData.obraId = obraId;
+        if (fecha) updateData.fecha = new Date(fecha);
+        if (precioBase !== undefined) updateData.precioEntradaBase = precioBase;
+        if (salaNombre) updateData.salaNombre = salaNombre;
+        if (ciudad) updateData.ciudad = ciudad;
+        if (capacidadSala !== undefined) updateData.capacidadSala = capacidadSala;
+
+        const updatedFuncion = (await prisma.funcion.update({
+            where: { id: id as string },
+            data: updateData,
+            include: { obra: { select: { nombre: true } } }
+        })) as any;
+
+        // Automated Billboard Announcement (non-blocking)
+        try {
+            const dateStr = updatedFuncion.fecha.toLocaleDateString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                timeZone: 'America/Argentina/Buenos_Aires'
+            });
+            const mensajeContenido = `🤖 **Agente OpenClaw** actualizó la función:\n**${updatedFuncion.obra.nombre}** en ${updatedFuncion.salaNombre} (${updatedFuncion.ciudad}) para el día **${dateStr}**.`;
+
+            await prisma.mensaje.create({
+                data: {
+                    contenido: mensajeContenido,
+                    autorId: req.user!.id,
+                }
+            });
+        } catch (error) {
+            console.warn('Auto-billboard announcement failed for agent update:', error);
+        }
+
+        res.json(updatedFuncion);
+    } catch (error) {
+        console.error('Agent update funcion error:', error);
+        res.status(500).json({ error: 'Error updating funcion via agent' });
+    }
+};
+
 export const getAgentFunciones = async (req: AuthRequest, res: Response) => {
     try {
         const funciones = await prisma.funcion.findMany({
