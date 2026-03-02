@@ -142,7 +142,11 @@ const LiquidacionDetalle: React.FC = () => {
             setRepartoProduccionPorcentaje(Number(existingLiquidacion.repartoProduccionPorcentaje) || 30);
             setMoneda(existingLiquidacion.moneda || 'ARS');
             setTipoCambio(Number(existingLiquidacion.tipoCambio) || 1);
-            setImpuestoTransferenciaPorcentaje(existingLiquidacion.impuestoTransferenciaPorcentaje !== undefined ? Number(existingLiquidacion.impuestoTransferenciaPorcentaje) : 1.2);
+
+            // Tax: respect saved value, or default based on currency
+            const defaultTax = (existingLiquidacion.moneda === 'USD' || existingLiquidacion.moneda === 'EUR') ? 0 : 1.2;
+            setImpuestoTransferenciaPorcentaje(existingLiquidacion.impuestoTransferenciaPorcentaje !== undefined ? Number(existingLiquidacion.impuestoTransferenciaPorcentaje) : defaultTax);
+
             setBordereauxImage(existingLiquidacion.bordereauxImage);
 
             // Artist Payouts
@@ -652,7 +656,12 @@ const LiquidacionDetalle: React.FC = () => {
                                     onChange={(e) => {
                                         const newMoneda = e.target.value as any;
                                         setMoneda(newMoneda);
-                                        if (newMoneda === 'ARS') setTipoCambio(1);
+                                        if (newMoneda === 'ARS') {
+                                            setTipoCambio(1);
+                                            setImpuestoTransferenciaPorcentaje(1.2);
+                                        } else {
+                                            setImpuestoTransferenciaPorcentaje(0);
+                                        }
                                     }}
                                     className="w-full bg-transparent border-none text-sm font-bold focus:ring-0 cursor-pointer"
                                 >
