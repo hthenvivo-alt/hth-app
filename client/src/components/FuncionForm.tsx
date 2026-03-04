@@ -96,7 +96,9 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
 
     // Consolidate auto-population logic
     const triggerAutoPopulate = (salaName: string, city: string) => {
-        if (!allFunciones || !salaName) return;
+        // Disable auto-populate if we are editing an existing function
+        // or if there is no sala name yet.
+        if (!allFunciones || !salaName || initialData) return;
 
         const typedSala = salaName.trim().toLowerCase();
         const typedCity = city?.trim().toLowerCase();
@@ -126,14 +128,15 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
         if (existingData) {
             setFormData(prev => ({
                 ...prev,
-                salaDireccion: existingData.salaDireccion || prev.salaDireccion,
-                ciudad: existingData.ciudad || prev.ciudad,
-                pais: existingData.pais || prev.pais,
-                capacidadSala: existingData.capacidadSala?.toString() || prev.capacidadSala,
-                linkVentaTicketera: existingData.linkVentaTicketera || prev.linkVentaTicketera,
-                userVentaTicketera: existingData.userVentaTicketera || prev.userVentaTicketera,
-                passVentaTicketera: existingData.passVentaTicketera || prev.passVentaTicketera,
-                linkMonitoreoVenta: existingData.linkMonitoreoVenta || prev.linkMonitoreoVenta,
+                // Only auto-populate if the current value is empty
+                salaDireccion: prev.salaDireccion.trim() === '' ? (existingData.salaDireccion || prev.salaDireccion) : prev.salaDireccion,
+                ciudad: prev.ciudad.trim() === '' ? (existingData.ciudad || prev.ciudad) : prev.ciudad,
+                pais: prev.pais.trim() === '' || prev.pais === 'Argentina' ? (existingData.pais || prev.pais) : prev.pais,
+                capacidadSala: prev.capacidadSala === '' ? (existingData.capacidadSala?.toString() || prev.capacidadSala) : prev.capacidadSala,
+                linkVentaTicketera: prev.linkVentaTicketera.trim() === '' ? (existingData.linkVentaTicketera || prev.linkVentaTicketera) : prev.linkVentaTicketera,
+                userVentaTicketera: prev.userVentaTicketera.trim() === '' ? (existingData.userVentaTicketera || prev.userVentaTicketera) : prev.userVentaTicketera,
+                passVentaTicketera: prev.passVentaTicketera.trim() === '' ? (existingData.passVentaTicketera || prev.passVentaTicketera) : prev.passVentaTicketera,
+                linkMonitoreoVenta: prev.linkMonitoreoVenta.trim() === '' ? (existingData.linkMonitoreoVenta || prev.linkMonitoreoVenta) : prev.linkMonitoreoVenta,
             }));
         }
     };
@@ -145,7 +148,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
 
     const handleCityChange = (city: string) => {
         setFormData(prev => ({ ...prev, ciudad: city }));
-        triggerAutoPopulate(formData.salaNombre, city);
+        // No trigger here to avoid fighting with user typing
     };
 
     const addFecha = () => {
