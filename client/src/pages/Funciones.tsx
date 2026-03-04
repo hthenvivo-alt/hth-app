@@ -7,8 +7,10 @@ import Modal from '../components/Modal';
 import FuncionForm from '../components/FuncionForm';
 import VentaUpdateForm from '../components/VentaUpdateForm';
 import InvitadosModal from '../components/InvitadosModal';
+import CalendarView from '../components/CalendarView';
 import {
     Calendar,
+    LayoutGrid,
     Plus,
     Search,
     Filter,
@@ -59,6 +61,7 @@ const Funciones: React.FC = () => {
     const [selectedFuncionId, setSelectedFuncionId] = React.useState<string | null>(null);
     const [syncingId, setSyncingId] = React.useState<string | null>(null);
     const [showPast, setShowPast] = React.useState(false);
+    const [viewMode, setViewMode] = React.useState<'list' | 'calendar'>('list');
 
     // Filter States
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -302,10 +305,30 @@ const Funciones: React.FC = () => {
 
     return (
         <div className="p-8">
-            <header className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Gestión de Funciones</h1>
-                    <p className="text-gray-500">Programa y monitorea las presentaciones en vivo.</p>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                <div className="flex flex-col md:flex-row md:items-end gap-6">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Gestión de Funciones</h1>
+                        <p className="text-gray-500">Programa y monitorea las presentaciones en vivo.</p>
+                    </div>
+
+                    {/* View Switcher */}
+                    <div className="flex bg-[#121212] p-1 rounded-xl border border-white/5 w-fit">
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${viewMode === 'list' ? 'bg-primary-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            <Calendar size={14} />
+                            Lista
+                        </button>
+                        <button
+                            onClick={() => setViewMode('calendar')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${viewMode === 'calendar' ? 'bg-primary-500 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            <LayoutGrid size={14} />
+                            Calendario
+                        </button>
+                    </div>
                 </div>
                 <div className="flex items-center gap-3">
                     {isAdmin && (
@@ -412,22 +435,35 @@ const Funciones: React.FC = () => {
                 </div>
             </div>
 
-            {/* Future Functions List */}
+            {/* Main Content Area */}
             <div className="space-y-4">
                 {isLoading ? (
                     <div className="bg-[#121212] border border-white/5 rounded-2xl overflow-hidden animate-pulse">
                         <div className="h-64 bg-white/[0.01]" />
                     </div>
-                ) : futureFunciones.length > 0 ? (
-                    renderFuncionTable(futureFunciones)
+                ) : viewMode === 'list' ? (
+                    filteredFunciones.length > 0 ? (
+                        <>
+                            {futureFunciones.length > 0 && renderFuncionTable(futureFunciones)}
+                            {showPast && pastFunciones.length > 0 && (
+                                <div className="mt-8">
+                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Funciones Pasadas</h3>
+                                    {renderFuncionTable(pastFunciones, true)}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="bg-[#121212] border border-white/5 rounded-2xl p-20 text-center text-gray-500">
+                            <Calendar size={48} className="mx-auto mb-4 opacity-20" />
+                            <p className="text-lg font-medium">No hay funciones que coincidan con los filtros</p>
+                        </div>
+                    )
                 ) : (
-                    <div className="bg-[#121212] border border-white/5 rounded-2xl p-20 text-center text-gray-500">
-                        <Calendar size={48} className="mx-auto mb-4 opacity-20" />
-                        <p className="text-lg font-medium">No hay funciones programadas próximamente</p>
-                        {canManage && (
-                            <button onClick={openCreateModal} className="mt-4 text-primary-500 font-bold hover:underline">Programar una nueva función</button>
-                        )}
-                    </div>
+                    <CalendarView
+                        funciones={filteredFunciones}
+                        onEdit={openEditModal}
+                        onNavigate={(id) => navigate(`/logistica/${id}`)}
+                    />
                 )}
             </div>
 
