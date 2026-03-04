@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.js';
 import obrasRoutes from './routes/obras.js';
@@ -22,6 +24,9 @@ import agentRoutes from './routes/agent.js';
 import { createBackup } from './controllers/backup.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,6 +55,17 @@ app.use('/agent', agentRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Serve static files from the React app
+const clientPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientPath));
+
+// Catch-all route to serve index.html for SPA routing
+app.get('*', (req, res) => {
+    // Check if it's an API route that wasn't matched (optional but good practice)
+    // Here we just serve index.html for anything not caught by previous routes
+    res.sendFile(path.join(clientPath, 'index.html'));
 });
 
 // Automatic Daily Backup (24h)
