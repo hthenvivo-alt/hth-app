@@ -10,11 +10,14 @@ import {
     Loader2,
     Music2,
     Filter,
-    Clock
+    Clock,
+    Download
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import { useAuth } from '../context/AuthContext';
 import SalesEvolutionModal from '../components/SalesEvolutionModal';
+import { convertToCSV, downloadCSV } from '../utils/csvUtils';
+import SalesMatrixView from '../components/SalesMatrixView';
 
 const ArtistReports: React.FC = () => {
     const { user } = useAuth();
@@ -25,6 +28,8 @@ const ArtistReports: React.FC = () => {
     const [selectedObraId, setSelectedObraId] = useState<string>('all');
     const [selectedFuncionForChart, setSelectedFuncionForChart] = useState<any>(null);
     const [showPast, setShowPast] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
 
     const { data: obras, isLoading } = useQuery({
         queryKey: ['artist-reports'],
@@ -33,6 +38,38 @@ const ArtistReports: React.FC = () => {
             return res.data;
         }
     });
+
+    const { data: matrixData, isLoading: isLoadingMatrix } = useQuery({
+        queryKey: ['matrix-report'],
+        queryFn: async () => {
+            const res = await api.get('/reportes/matrix-report');
+            return res.data;
+        },
+        enabled: viewMode === 'matrix'
+    });
+
+    const handleExportEvolucion = async () => {
+        if (selectedObraId === 'all') return;
+
+        setIsExporting(true);
+        try {
+            const res = await api.get(`/reportes/evolucion-obra/${selectedObraId}`);
+            const data = res.data;
+
+            if (data && data.length > 0) {
+                const obraNombre = data[0].obraNombre;
+                const csv = convertToCSV(data);
+                downloadCSV(csv, `evolucion_ventas_${obraNombre.replace(/\s+/g, '_').toLowerCase()}.csv`);
+            } else {
+                alert('No hay datos de evolución para exportar.');
+            }
+        } catch (error) {
+            console.error('Error exporting evolution:', error);
+            alert('Error al exportar los datos.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -138,32 +175,60 @@ const ArtistReports: React.FC = () => {
                             {canFilter ? 'Panel de Administración' : 'Portal del Artista'}
                         </h1>
                         <h2 className="text-5xl font-black text-white tracking-tighter mb-4 italic">Monitor de {canFilter ? 'Ventas' : 'Funciones'}</h2>
-                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2">
-                            Control de venta de entradas y agenda en tiempo real
-                        </p>
-                    </div>
 
+                        {isAdmin && (
+                            <div className="flex items-center gap-2 mt-6">
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-primary-500 text-white shadow-lg' : 'bg-white/5 text-gray-500'
+                                        }`}
+                                >
+                                    Vista Lista
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('matrix')}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'matrix' ? 'bg-primary-500 text-white shadow-lg' : 'bg-white/5 text-gray-500'
+                                        }`}
+                                >
+                                    Vista Matriz
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <div className="flex flex-col md:flex-row items-center gap-6">
                         {canFilter && (
-                            <div className="relative group min-w-[250px]">
-                                <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-500" />
-                                <select
-                                    value={selectedObraId}
-                                    onChange={(e) => {
-                                        setSelectedObraId(e.target.value);
-                                        setShowPast(false);
-                                    }}
-                                    className="w-full pl-12 pr-10 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all font-black uppercase text-[10px] tracking-widest text-white appearance-none cursor-pointer hover:bg-white/10"
-                                >
-                                    <option value="all">Todas las Obras</option>
-                                    {obras?.map((obra: any) => (
-                                        <option key={obra.id} value={obra.id}>{obra.nombre}</option>
-                                    ))}
-                                </select>
+                            <div className="flex flex-col md:flex-row items-center gap-4">
+                                <div className="relative group min-w-[250px]">
+                                    <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-500" />
+                                    <select
+                                        value={selectedObraId}
+                                        onChange={(e) => {
+                                            setSelectedObraId(e.target.value);
+                                            setShowPast(false);
+                                        }}
+                                        className="w-full pl-12 pr-10 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all font-black uppercase text-[10px] tracking-widest text-white appearance-none cursor-pointer hover:bg-white/10"
+                                    >
+                                        <option value="all">Todas las Obras</option>
+                                        {obras?.map((obra: any) => (
+                                            <option key={obra.id} value={obra.id}>{obra.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {selectedObraId !== 'all' && viewMode === 'list' && (
+                                    <button
+                                        onClick={handleExportEvolucion}
+                                        disabled={isExporting}
+                                        className="flex items-center gap-3 px-6 py-4 rounded-2xl border border-white/10 bg-white/5 text-gray-400 hover:bg-primary-500 hover:border-primary-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-primary-500/20"
+                                    >
+                                        {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                                        <span>Exportar CSV</span>
+                                    </button>
+                                )}
                             </div>
                         )}
 
-                        {pastFunciones.length > 0 && (
+                        {viewMode === 'list' && pastFunciones.length > 0 && (
                             <button
                                 onClick={() => setShowPast(!showPast)}
                                 className={`flex items-center gap-3 px-6 py-4 rounded-2xl border transition-all font-black uppercase text-[10px] tracking-widest ${showPast
@@ -172,7 +237,7 @@ const ArtistReports: React.FC = () => {
                                     }`}
                             >
                                 <Clock size={16} />
-                                <span>{showPast ? 'Ocultar' : 'Ver'} Funciones Pasadas ({pastFunciones.length})</span>
+                                <span>{showPast ? 'Ocultar' : 'Ver'} Pasadas ({pastFunciones.length})</span>
                                 <ChevronRight size={14} className={`transition-transform duration-300 ${showPast ? 'rotate-90' : ''}`} />
                             </button>
                         )}
@@ -180,54 +245,64 @@ const ArtistReports: React.FC = () => {
                 </div>
             </header>
 
-            {futureFunciones.length === 0 && !showPast ? (
-                <div className="bg-[#121212] border border-white/5 rounded-[2rem] p-24 text-center">
-                    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
-                        <Calendar size={40} className="text-gray-700" />
+            {viewMode === 'matrix' ? (
+                isLoadingMatrix ? (
+                    <div className="flex flex-col items-center justify-center py-32 gap-4">
+                        <Loader2 className="animate-spin text-primary-500 w-12 h-12" />
+                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Generando Matriz de Ventas...</span>
                     </div>
-                    <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">No hay funciones programadas</h3>
-                    <p className="text-gray-600 font-bold uppercase text-[10px] tracking-widest">
-                        {selectedObraId !== 'all' ? 'No hay funciones registradas para esta obra' : 'Tus próximas presentaciones aparecerán aquí'}
-                    </p>
-                </div>
+                ) : (
+                    <SalesMatrixView data={matrixData || []} selectedObraId={selectedObraId} />
+                )
             ) : (
-                <div className="space-y-12">
-                    {/* Past Section */}
-                    {showPast && pastFunciones.length > 0 && (
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="h-px flex-1 bg-white/5"></div>
-                                <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em]">Archivo Histórico</h3>
-                                <div className="h-px flex-1 bg-white/5"></div>
+                <>
+                    {futureFunciones.length === 0 && !showPast ? (
+                        <div className="bg-[#121212] border border-white/5 rounded-[2rem] p-24 text-center">
+                            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8">
+                                <Calendar size={40} className="text-gray-700" />
                             </div>
-                            <div className="space-y-4 opacity-70 grayscale-[0.3] hover:opacity-100 hover:grayscale-0 transition-all duration-500">
-                                {pastFunciones.map((f: any) => {
-                                    const totalSold = f.vendidas || 0;
-                                    const capacity = f.capacidadSala || 0;
-                                    const percentage = capacity > 0 ? Math.min((totalSold / capacity) * 100, 100) : 0;
-                                    return renderFuncionCard(f, totalSold, capacity, percentage);
-                                })}
-                            </div>
-                            <div className="flex items-center gap-4 mt-8">
-                                <div className="h-px flex-1 bg-primary-500/20"></div>
-                                <h3 className="text-[9px] font-black text-primary-500/50 uppercase tracking-[0.4em]">Próximas Funciones</h3>
-                                <div className="h-px flex-1 bg-primary-500/20"></div>
-                            </div>
+                            <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">No hay funciones programadas</h3>
                         </div>
-                    )}
+                    ) : (
+                        <div className="space-y-12">
+                            {/* Past Section */}
+                            {showPast && pastFunciones.length > 0 && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="h-px flex-1 bg-white/5"></div>
+                                        <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em]">Archivo Histórico</h3>
+                                        <div className="h-px flex-1 bg-white/5"></div>
+                                    </div>
+                                    <div className="space-y-4 opacity-70 grayscale-[0.3] hover:opacity-100 hover:grayscale-0 transition-all duration-500">
+                                        {pastFunciones.map((f: any) => {
+                                            const totalSold = f.vendidas || 0;
+                                            const capacity = f.capacidadSala || 0;
+                                            const percentage = capacity > 0 ? Math.min((totalSold / capacity) * 100, 100) : 0;
+                                            return renderFuncionCard(f, totalSold, capacity, percentage);
+                                        })}
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-8">
+                                        <div className="h-px flex-1 bg-primary-500/20"></div>
+                                        <h3 className="text-[9px] font-black text-primary-500/50 uppercase tracking-[0.4em]">Próximas Funciones</h3>
+                                        <div className="h-px flex-1 bg-primary-500/20"></div>
+                                    </div>
+                                </div>
+                            )}
 
-                    {/* Future Section */}
-                    {futureFunciones.length > 0 && (
-                        <div className="space-y-4">
-                            {futureFunciones.map((f: any) => {
-                                const totalSold = f.vendidas || 0;
-                                const capacity = f.capacidadSala || 0;
-                                const percentage = capacity > 0 ? Math.min((totalSold / capacity) * 100, 100) : 0;
-                                return renderFuncionCard(f, totalSold, capacity, percentage);
-                            })}
+                            {/* Future Section */}
+                            {futureFunciones.length > 0 && (
+                                <div className="space-y-4">
+                                    {futureFunciones.map((f: any) => {
+                                        const totalSold = f.vendidas || 0;
+                                        const capacity = f.capacidadSala || 0;
+                                        const percentage = capacity > 0 ? Math.min((totalSold / capacity) * 100, 100) : 0;
+                                        return renderFuncionCard(f, totalSold, capacity, percentage);
+                                    })}
+                                </div>
+                            )}
                         </div>
                     )}
-                </div>
+                </>
             )}
 
             {selectedFuncionForChart && (
