@@ -10,13 +10,11 @@ import {
     Loader2,
     Music2,
     Filter,
-    Clock,
-    Download
+    Clock
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import { useAuth } from '../context/AuthContext';
 import SalesEvolutionModal from '../components/SalesEvolutionModal';
-import { convertToCSV, downloadCSV } from '../utils/csvUtils';
 import SalesMatrixView from '../components/SalesMatrixView';
 
 const ArtistReports: React.FC = () => {
@@ -28,7 +26,6 @@ const ArtistReports: React.FC = () => {
     const [selectedObraId, setSelectedObraId] = useState<string>('all');
     const [selectedFuncionForChart, setSelectedFuncionForChart] = useState<any>(null);
     const [showPast, setShowPast] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
 
     const { data: obras, isLoading } = useQuery({
@@ -47,29 +44,6 @@ const ArtistReports: React.FC = () => {
         },
         enabled: viewMode === 'matrix'
     });
-
-    const handleExportEvolucion = async () => {
-        if (selectedObraId === 'all') return;
-
-        setIsExporting(true);
-        try {
-            const res = await api.get(`/reportes/evolucion-obra/${selectedObraId}`);
-            const data = res.data;
-
-            if (data && data.length > 0) {
-                const obraNombre = data[0].obraNombre;
-                const csv = convertToCSV(data);
-                downloadCSV(csv, `evolucion_ventas_${obraNombre.replace(/\s+/g, '_').toLowerCase()}.csv`);
-            } else {
-                alert('No hay datos de evolución para exportar.');
-            }
-        } catch (error) {
-            console.error('Error exporting evolution:', error);
-            alert('Error al exportar los datos.');
-        } finally {
-            setIsExporting(false);
-        }
-    };
 
     if (isLoading) {
         return (
@@ -214,17 +188,6 @@ const ArtistReports: React.FC = () => {
                                         ))}
                                     </select>
                                 </div>
-
-                                {selectedObraId !== 'all' && viewMode === 'list' && (
-                                    <button
-                                        onClick={handleExportEvolucion}
-                                        disabled={isExporting}
-                                        className="flex items-center gap-3 px-6 py-4 rounded-2xl border border-white/10 bg-white/5 text-gray-400 hover:bg-primary-500 hover:border-primary-500 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-primary-500/20"
-                                    >
-                                        {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                                        <span>Exportar CSV</span>
-                                    </button>
-                                )}
                             </div>
                         )}
 
