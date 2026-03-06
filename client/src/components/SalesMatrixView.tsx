@@ -14,6 +14,7 @@ interface Funcion {
     salaNombre: string;
     ciudad: string;
     capacidadSala: number;
+    vendidas: number;
     ventas: Venta[];
 }
 

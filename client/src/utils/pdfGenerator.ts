@@ -3,6 +3,32 @@ import { PDFDocument } from 'pdf-lib';
 import autoTable from 'jspdf-autotable';
 import api from '../lib/api';
 
+const compressImage = (img: HTMLImageElement): string => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return img.src;
+
+    const MAX_WIDTH = 1200;
+    const MAX_HEIGHT = 1600;
+    let width = img.naturalWidth;
+    let height = img.naturalHeight;
+
+    if (width > MAX_WIDTH) {
+        height = Math.round((height * MAX_WIDTH) / width);
+        width = MAX_WIDTH;
+    }
+    if (height > MAX_HEIGHT) {
+        width = Math.round((width * MAX_HEIGHT) / height);
+        height = MAX_HEIGHT;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(img, 0, 0, width, height);
+
+    return canvas.toDataURL('image/jpeg', 0.7);
+};
+
 export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
     const doc = new jsPDF();
     const obraNombre = funcion.obra?.nombre || 'Hoja de Ruta';
@@ -164,7 +190,7 @@ export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
 };
 
 export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos: any[] = [], comprobantes: any[] = []) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ compress: true });
     const obraNombre = funcion.obra?.nombre || 'Liquidación';
     const d = new Date(funcion.fecha);
     const day = String(d.getDate()).padStart(2, '0');
@@ -399,125 +425,128 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
             });
 
             if (img.complete && img.naturalWidth > 0) {
-                const imgWidth = 180;
-                const imgHeight = (img.naturalHeight * imgWidth) / img.naturalWidth;
+                const targetWidth = 180;
+                const targetHeight = (img.naturalHeight * targetWidth) / img.naturalWidth;
                 const maxHeight = 240;
-                let finalWidth = imgWidth;
-                let finalHeight = imgHeight;
+                let finalW = targetWidth;
+                let finalH = targetHeight;
 
-                if (imgHeight > maxHeight) {
-                    finalHeight = maxHeight;
-                    finalWidth = (img.naturalWidth * finalHeight) / img.naturalHeight;
+                if (finalH > maxHeight) {
+                    finalH = maxHeight;
+                    finalW = (img.naturalWidth * finalH) / img.naturalHeight;
                 }
 
-                doc.addImage(img, 'JPEG', (210 - finalWidth) / 2, 30, finalWidth, finalHeight);
-            } else {
-                doc.setTextColor(100, 100, 100);
-                doc.text('No se pudo cargar la imagen del bordereaux.', 15, 40);
+                const compressedData = compressImage(img);
+                doc.addImage(compressedData, 'JPEG', (210 - finalW) / 2, 30, finalW, finalH);
             }
-        } catch (e) {
-            console.error('Error adding image to PDF:', e);
+        } else {
+            doc.setTextColor(100, 100, 100);
+            doc.text('No se pudo cargar la imagen del bordereaux.', 15, 40);
         }
+    } catch (e) {
+        console.error('Error adding image to PDF:', e);
     }
+}
 
-    // SECTION 6: COMPROBANTES / VOUCHERS (New Section)
-    if (comprobantes && comprobantes.length > 0) {
-        for (const docEntry of comprobantes) {
-            doc.addPage();
-            doc.setFillColor(dark[0], dark[1], dark[2]);
-            doc.rect(0, 0, 210, 20, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(10);
-            doc.text(`COMPROBANTE: ${docEntry.nombreDocumento.toUpperCase()}`, 15, 13);
+// SECTION 6: COMPROBANTES / VOUCHERS (New Section)
+if (comprobantes && comprobantes.length > 0) {
+    for (const docEntry of comprobantes) {
+        doc.addPage();
+        doc.setFillColor(dark[0], dark[1], dark[2]);
+        doc.rect(0, 0, 210, 20, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.text(`COMPROBANTE: ${docEntry.nombreDocumento.toUpperCase()}`, 15, 13);
 
-            const isImage = /\.(jpg|jpeg|png|webp)$/i.test(docEntry.linkDrive);
+        const isImage = /\.(jpg|jpeg|png|webp)$/i.test(docEntry.linkDrive);
 
-            if (isImage) {
-                try {
-                    const imgUrl = `${api.defaults.baseURL?.replace('/api', '')}${docEntry.linkDrive}`;
-                    const img = new Image();
-                    img.src = imgUrl;
+        if (isImage) {
+            try {
+                const imgUrl = `${api.defaults.baseURL?.replace('/api', '')}${docEntry.linkDrive}`;
+                const img = new Image();
+                img.src = imgUrl;
 
-                    await new Promise((resolve) => {
-                        img.onload = resolve;
-                        img.onerror = resolve;
-                    });
+                await new Promise((resolve) => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                });
 
-                    if (img.complete && img.naturalWidth > 0) {
-                        const imgWidth = 180;
-                        const imgHeight = (img.naturalHeight * imgWidth) / img.naturalWidth;
-                        const maxHeight = 240;
-                        let finalWidth = imgWidth;
-                        let finalHeight = imgHeight;
+                if (img.complete && img.naturalWidth > 0) {
+                    const imgWidth = 180;
+                    const imgHeight = (img.naturalHeight * imgWidth) / img.naturalWidth;
+                    const maxHeight = 240;
+                    let finalW = imgWidth;
+                    let finalH = imgHeight;
 
-                        if (imgHeight > maxHeight) {
-                            finalHeight = maxHeight;
-                            finalWidth = (img.naturalWidth * finalHeight) / img.naturalHeight;
-                        }
-
-                        doc.addImage(img, 'JPEG', (210 - finalWidth) / 2, 30, finalWidth, finalHeight);
-                    } else {
-                        doc.setTextColor(100, 100, 100);
-                        doc.text('No se pudo cargar la imagen del comprobante.', 15, 40);
+                    if (finalH > maxHeight) {
+                        finalH = maxHeight;
+                        finalW = (img.naturalWidth * finalH) / img.naturalHeight;
                     }
-                } catch (e) {
-                    console.error('Error adding voucher image to PDF:', e);
+
+                    const compressedData = compressImage(img);
+                    doc.addImage(compressedData, 'JPEG', (210 - finalW) / 2, 30, finalW, finalH);
+                } else {
+                    doc.setTextColor(100, 100, 100);
+                    doc.text('No se pudo cargar la imagen del comprobante.', 15, 40);
                 }
-            } else {
-                doc.setTextColor(100, 100, 100);
-                doc.setFontSize(12);
-                doc.text('Documento adjunto (PDF / Otro)', 15, 40);
-                doc.setFontSize(10);
-                doc.text(`Nombre: ${docEntry.nombreDocumento}`, 15, 50);
-                doc.text('Este documento no se puede visualizar directamente en el PDF.', 15, 60);
+            } catch (e) {
+                console.error('Error adding voucher image to PDF:', e);
             }
+        } else {
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(12);
+            doc.text('Documento adjunto (PDF / Otro)', 15, 40);
+            doc.setFontSize(10);
+            doc.text(`Nombre: ${docEntry.nombreDocumento}`, 15, 50);
+            doc.text('Este documento no se puede visualizar directamente en el PDF.', 15, 60);
         }
     }
+}
 
 
 
-    addFooter(doc);
+addFooter(doc);
 
 
-    const finalFileName = `Liquidacion_${obraNombre.replace(/\s+/g, '_')}_${fechaStr.replace(/\//g, '-')}.pdf`;
+const finalFileName = `Liquidacion_${obraNombre.replace(/\s+/g, '_')}_${fechaStr.replace(/\//g, '-')}.pdf`;
 
-    // PDF MERGE LOGIC FOR BORDEREAUX
-    if (liqData.bordereauxImage && liqData.bordereauxImage.toLowerCase().endsWith('.pdf')) {
-        try {
-            const reportPdfBytes = doc.output('arraybuffer');
-            const reportPdfDoc = await PDFDocument.load(reportPdfBytes);
+// PDF MERGE LOGIC FOR BORDEREAUX
+if (liqData.bordereauxImage && liqData.bordereauxImage.toLowerCase().endsWith('.pdf')) {
+    try {
+        const reportPdfBytes = doc.output('arraybuffer');
+        const reportPdfDoc = await PDFDocument.load(reportPdfBytes);
 
-            const bordereauxUrl = `${api.defaults.baseURL?.replace('/api', '')}${liqData.bordereauxImage}`;
-            const response = await fetch(bordereauxUrl);
-            const bordereauxBytes = await response.arrayBuffer();
-            const bordereauxPdfDoc = await PDFDocument.load(bordereauxBytes);
+        const bordereauxUrl = `${api.defaults.baseURL?.replace('/api', '')}${liqData.bordereauxImage}`;
+        const response = await fetch(bordereauxUrl);
+        const bordereauxBytes = await response.arrayBuffer();
+        const bordereauxPdfDoc = await PDFDocument.load(bordereauxBytes);
 
-            const copiedPages = await reportPdfDoc.copyPages(bordereauxPdfDoc, bordereauxPdfDoc.getPageIndices());
-            copiedPages.forEach((page) => reportPdfDoc.addPage(page));
+        const copiedPages = await reportPdfDoc.copyPages(bordereauxPdfDoc, bordereauxPdfDoc.getPageIndices());
+        copiedPages.forEach((page) => reportPdfDoc.addPage(page));
 
-            const pdfBytes = await reportPdfDoc.save();
-            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = finalFileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error('Error merging PDF:', error);
-            alert('Error al fusionar el bordereaux PDF. Se descargará solo el reporte.');
-            doc.save(finalFileName);
-        }
-    } else {
+        const pdfBytes = await reportPdfDoc.save();
+        const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = finalFileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error merging PDF:', error);
+        alert('Error al fusionar el bordereaux PDF. Se descargará solo el reporte.');
         doc.save(finalFileName);
     }
+} else {
+    doc.save(finalFileName);
+}
 };
 
 export const generateBatchLiquidacionPDF = async (data: any) => {
     const { grupal } = data;
-    const doc = new jsPDF();
+    const doc = new jsPDF({ compress: true });
     const symbol = grupal.moneda === 'ARS' ? '$' : (grupal.moneda === 'USD' ? 'U$D' : '€');
     const primary = [220, 38, 38];
     const dark = [30, 30, 30];
