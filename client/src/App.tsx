@@ -17,8 +17,11 @@ import Usuarios from './pages/Usuarios';
 import ArtistReports from './pages/ArtistReports';
 import Sidebar from './components/Sidebar';
 
+import MobileHeader from './components/MobileHeader';
+
 const App: React.FC = () => {
   const { user, loading } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   if (loading) {
     return (
@@ -31,8 +34,13 @@ const App: React.FC = () => {
   return (
     <Router>
       <div className="flex min-h-screen bg-[#0f0f0f] text-white">
-        {user && <Sidebar />}
-        <main className={`flex-1 ${user ? 'pl-64' : ''}`}>
+        {user && (
+          <>
+            <MobileHeader onOpenSidebar={() => setIsSidebarOpen(true)} />
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+          </>
+        )}
+        <main className={`flex-1 transition-all duration-300 ${user ? 'lg:pl-64 pt-16 lg:pt-0' : ''}`}>
           <Routes>
             <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

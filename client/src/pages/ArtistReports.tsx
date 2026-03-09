@@ -136,19 +136,19 @@ const ArtistReports: React.FC = () => {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 md:space-y-12">
             {/* Header section with a premium feel */}
-            <header className="relative py-12 px-10 rounded-[2.5rem] bg-[#121212] border border-white/5 overflow-hidden shadow-2xl">
-                <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none">
+            <header className="relative py-8 md:py-12 px-6 md:px-10 rounded-[1.5rem] md:rounded-[2.5rem] bg-[#121212] border border-white/5 overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none hidden md:block">
                     <Music2 size={240} className="text-primary-500" />
                 </div>
                 <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
                     <div>
-                        <h1 className="text-sm font-black text-primary-500 uppercase tracking-[0.4em] mb-3 flex items-center gap-3">
-                            <TrendingUp size={24} />
+                        <h1 className="text-[10px] md:text-sm font-black text-primary-500 uppercase tracking-[0.2em] md:tracking-[0.4em] mb-3 flex items-center gap-3">
+                            <TrendingUp size={20} className="md:w-6 md:h-6" />
                             {canFilter ? 'Panel de Administración' : 'Portal del Artista'}
                         </h1>
-                        <h2 className="text-5xl font-black text-white tracking-tighter mb-4 italic">Monitor de {canFilter ? 'Ventas' : 'Funciones'}</h2>
+                        <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter mb-4 italic">Monitor de {canFilter ? 'Ventas' : 'Funciones'}</h2>
 
                         {isAdmin && (
                             <div className="flex items-center gap-2 mt-6">
@@ -169,32 +169,30 @@ const ArtistReports: React.FC = () => {
                             </div>
                         )}
                     </div>
-                    <div className="flex flex-col md:flex-row items-center gap-6">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 md:gap-6">
                         {canFilter && (
-                            <div className="flex flex-col md:flex-row items-center gap-4">
-                                <div className="relative group min-w-[250px]">
-                                    <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-500" />
-                                    <select
-                                        value={selectedObraId}
-                                        onChange={(e) => {
-                                            setSelectedObraId(e.target.value);
-                                            setShowPast(false);
-                                        }}
-                                        className="w-full pl-12 pr-10 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all font-black uppercase text-[10px] tracking-widest text-white appearance-none cursor-pointer hover:bg-white/10"
-                                    >
-                                        <option value="all">Todas las Obras</option>
-                                        {obras?.map((obra: any) => (
-                                            <option key={obra.id} value={obra.id}>{obra.nombre}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                            <div className="relative group min-w-[200px] md:min-w-[250px]">
+                                <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-500" />
+                                <select
+                                    value={selectedObraId}
+                                    onChange={(e) => {
+                                        setSelectedObraId(e.target.value);
+                                        setShowPast(false);
+                                    }}
+                                    className="w-full pl-12 pr-10 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all font-black uppercase text-[10px] tracking-widest text-white appearance-none cursor-pointer hover:bg-white/10"
+                                >
+                                    <option value="all">Todas las Obras</option>
+                                    {obras?.map((obra: any) => (
+                                        <option key={obra.id} value={obra.id}>{obra.nombre}</option>
+                                    ))}
+                                </select>
                             </div>
                         )}
 
                         {viewMode === 'list' && pastFunciones.length > 0 && (
                             <button
                                 onClick={() => setShowPast(!showPast)}
-                                className={`flex items-center gap-3 px-6 py-4 rounded-2xl border transition-all font-black uppercase text-[10px] tracking-widest ${showPast
+                                className={`flex items-center justify-center md:justify-start gap-3 px-6 py-4 rounded-2xl border transition-all font-black uppercase text-[10px] tracking-widest ${showPast
                                     ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-500/30'
                                     : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
                                     }`}

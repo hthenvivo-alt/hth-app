@@ -221,17 +221,21 @@ const SalesMatrixView: React.FC<SalesMatrixViewProps> = ({ data, selectedObraId 
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-end">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest lg:hidden flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Desliza hacia los lados para ver más fechas
+                </span>
                 <button
                     onClick={handleExportExcel}
-                    className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-lg"
+                    className="flex items-center justify-center gap-2 px-6 py-4 md:py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-lg w-full md:w-auto"
                 >
                     <Download size={16} />
                     Exportar Excel (Todas las Obras)
                 </button>
             </div>
 
-            <div className="overflow-x-auto rounded-[2rem] border border-white/5 bg-[#121212] shadow-2xl custom-scrollbar">
+            <div className="overflow-x-auto rounded-[1.5rem] md:rounded-[2.2rem] border border-white/5 bg-[#121212] shadow-2xl custom-scrollbar touch-pan-x">
                 <table className="w-full border-collapse">
                     <thead>
                         <tr className="bg-white/5">

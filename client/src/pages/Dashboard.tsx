@@ -72,15 +72,15 @@ const Dashboard: React.FC = () => {
     const funcionesSemana = dashboardData?.funcionesSemana || [];
 
     return (
-        <div className="p-8 pb-20 max-w-7xl mx-auto">
-            <header className="flex justify-between items-center mb-10">
+        <div className="p-4 md:p-8 pb-20 max-w-7xl mx-auto space-y-8">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tight text-white mb-1">Panel de Control</h1>
-                    <p className="text-gray-500 font-medium">Gestión estratégica de producciones HTH.</p>
+                    <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white mb-1">Panel de Control</h1>
+                    <p className="text-gray-500 font-medium text-sm">Gestión estratégica de producciones HTH.</p>
                 </div>
                 <button
                     onClick={() => navigate('/funciones')}
-                    className="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-6 py-3 rounded-2xl font-black transition-all shadow-xl shadow-primary-500/20 active:scale-95 text-sm uppercase tracking-wider"
+                    className="flex items-center justify-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-6 py-4 md:py-3 rounded-2xl font-black transition-all shadow-xl shadow-primary-500/20 active:scale-95 text-xs md:text-sm uppercase tracking-wider"
                 >
                     <Plus size={20} strokeWidth={3} />
                     <span>Programar Función</span>
