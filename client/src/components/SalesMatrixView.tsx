@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Download, Loader2 } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 
@@ -66,10 +66,10 @@ const SalesMatrixView: React.FC<SalesMatrixViewProps> = ({ data, selectedObraId 
         return { selectedObra, days };
     }, [selectedObra]);
 
-    const handleExportExcel = () => {
-        const wb = XLSX.utils.book_new();
+    const handleExportExcel = async () => {
+        const workbook = new ExcelJS.Workbook();
 
-        data.forEach(obra => {
+        for (const obra of data) {
             // Find date range for this obra
             let oMinDate = new Date();
             let oMaxDate = new Date();
@@ -92,15 +92,85 @@ const SalesMatrixView: React.FC<SalesMatrixViewProps> = ({ data, selectedObraId 
                 cur.setDate(cur.getDate() + 1);
             }
 
-            // Create headers
-            const headers = ['FUNCION', 'CAPACIDAD', ...oDays.map(d => formatDate(d.toISOString()))];
-            const rows = obra.funciones.map(f => {
-                const row: any = [
-                    `${formatDate(f.fecha)} ${f.ciudad} - ${f.salaNombre}`,
-                    f.capacidadSala
-                ];
+            const sheet = workbook.addWorksheet(obra.nombre.substring(0, 31));
 
-                oDays.forEach(day => {
+            // Column Config
+            sheet.getColumn(1).width = 40; // Funsion
+            sheet.getColumn(2).width = 12; // Capacidad
+            for (let i = 0; i < oDays.length; i++) {
+                sheet.getColumn(i + 3).width = 4; // User requested 3, but 4 looks better for numbers
+            }
+
+            // MONTHS ROW (Row 1)
+            const monthRow = sheet.getRow(1);
+            monthRow.font = { bold: true };
+            monthRow.alignment = { horizontal: 'center' };
+
+            let startIdx = 0;
+            while (startIdx < oDays.length) {
+                const currentMonth = oDays[startIdx].getMonth();
+                const currentYear = oDays[startIdx].getFullYear();
+                let endIdx = startIdx;
+
+                while (endIdx + 1 < oDays.length &&
+                    oDays[endIdx + 1].getMonth() === currentMonth &&
+                    oDays[endIdx + 1].getFullYear() === currentYear) {
+                    endIdx++;
+                }
+
+                const monthName = oDays[startIdx].toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+                const startCol = startIdx + 3;
+                const endCol = endIdx + 3;
+
+                sheet.mergeCells(1, startCol, 1, endCol);
+                const cell = sheet.getCell(1, startCol);
+                cell.value = monthName.toUpperCase();
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE0E0E0' }
+                };
+                cell.border = {
+                    left: { style: 'thick' },
+                    right: { style: 'thick' },
+                    top: { style: 'thin' },
+                    bottom: { style: 'thin' }
+                };
+
+                startIdx = endIdx + 1;
+            }
+
+            // HEADERS ROW (Row 2: Day numbers)
+            const headerRow = sheet.getRow(2);
+            headerRow.getCell(1).value = 'FUNCIÓN / CIUDAD / SALA';
+            headerRow.getCell(2).value = 'CAPACIDAD';
+            headerRow.font = { bold: true };
+
+            oDays.forEach((day, idx) => {
+                const col = idx + 3;
+                const cell = headerRow.getCell(col);
+                cell.value = day.getDate();
+                cell.alignment = { horizontal: 'center' };
+
+                // Add right border if it's the last day of the month
+                const isLastDayOfMonth = idx === oDays.length - 1 || oDays[idx].getMonth() !== oDays[idx + 1].getMonth();
+                if (isLastDayOfMonth) {
+                    cell.border = {
+                        ...cell.border,
+                        right: { style: 'thick' }
+                    };
+                }
+            });
+
+            // DATA ROWS
+            obra.funciones.forEach((f, fIdx) => {
+                const row = sheet.getRow(fIdx + 3);
+                row.getCell(1).value = `${formatDate(f.fecha)} - ${f.ciudad} - ${f.salaNombre}`;
+                row.getCell(2).value = f.capacidadSala;
+
+                oDays.forEach((day, dIdx) => {
+                    const col = dIdx + 3;
+                    const cell = row.getCell(col);
                     const dayStr = day.toDateString();
                     const isFunctionDate = new Date(f.fecha).toDateString() === dayStr;
 
@@ -109,21 +179,40 @@ const SalesMatrixView: React.FC<SalesMatrixViewProps> = ({ data, selectedObraId 
                         .reduce((sum, v) => sum + v.entradasVendidas, 0);
 
                     if (isFunctionDate) {
-                        row.push(f.vendidas || daySales); // Show total on function date
+                        cell.value = f.vendidas || daySales;
+                        cell.font = { bold: true };
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFFFFF00' } // Yellow for visibility
+                        };
                     } else if (daySales > 0) {
-                        row.push(daySales);
-                    } else {
-                        row.push('');
+                        cell.value = daySales;
+                    }
+
+                    cell.alignment = { horizontal: 'center' };
+
+                    // Thick border between months
+                    const isLastDayOfMonth = dIdx === oDays.length - 1 || oDays[dIdx].getMonth() !== oDays[dIdx + 1].getMonth();
+                    if (isLastDayOfMonth) {
+                        cell.border = {
+                            ...cell.border,
+                            right: { style: 'thick' }
+                        };
                     }
                 });
-                return row;
             });
+        }
 
-            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-            XLSX.utils.book_append_sheet(wb, ws, obra.nombre.substring(0, 31));
-        });
-
-        XLSX.writeFile(wb, `Reporte_Matriz_Ventas_${new Date().getFullYear()}.xlsx`);
+        // Save file
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `Reporte_Matriz_Ventas_${new Date().getFullYear()}.xlsx`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
     };
 
     if (!matrixData) return null;
