@@ -67,7 +67,7 @@ model Funcion {
   id                        String           @id @default(uuid())
   obraId                    String
   fecha                     DateTime
-  salaNombre                String
+  salaNombre                String?
   salaDireccion             String?
   ciudad                    String
   pais                      String           @default("Argentina")
@@ -84,6 +84,7 @@ model Funcion {
   ultimaFacturacionBruta    Decimal?         @db.Decimal(15, 2)
   userVentaTicketera        String?
   vendidas                  Int              @default(0)
+  confirmada                Boolean          @default(true)
   checklists                ChecklistTarea[]
   documentos                Documento[]
   obra                      Obra             @relation(fields: [obraId], references: [id], onDelete: Cascade)

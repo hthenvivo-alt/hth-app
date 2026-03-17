@@ -23,6 +23,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
         passVentaTicketera: '',
         linkMonitoreoVenta: '',
         notasProduccion: '',
+        confirmada: true,
     });
 
     const [fechas, setFechas] = useState<{ date: string, time: string }[]>(() => {
@@ -78,6 +79,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                 passVentaTicketera: initialData.passVentaTicketera || '',
                 linkMonitoreoVenta: initialData.linkMonitoreoVenta || '',
                 notasProduccion: initialData.notasProduccion || '',
+                confirmada: initialData.confirmada !== undefined ? initialData.confirmada : true,
             });
 
             if (initialData.fecha) {
@@ -98,7 +100,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
     const triggerAutoPopulate = (salaName: string, city: string) => {
         // Disable auto-populate if we are editing an existing function
         // or if there is no sala name yet.
-        if (!allFunciones || !salaName || initialData) return;
+        if (!allFunciones || !salaName || initialData?.id) return;
 
         const typedSala = salaName.trim().toLowerCase();
         const typedCity = city?.trim().toLowerCase();
@@ -224,17 +226,17 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                     <label className="block text-sm font-medium text-gray-400 mb-2">Obra</label>
                     <select
                         required
-                        disabled={!!initialData}
+                        disabled={!!initialData?.id}
                         value={formData.obraId}
                         onChange={(e) => setFormData({ ...formData, obraId: e.target.value })}
-                        className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-white ${!!initialData ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        className={`w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-white ${!!initialData?.id ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
                         <option value="">Seleccionar Obra...</option>
                         {obras?.map((obra: any) => (
                             <option key={obra.id} value={obra.id}>{obra.nombre}</option>
                         ))}
                     </select>
-                    {!!initialData && (
+                    {!!initialData?.id && (
                         <p className="mt-1.5 text-[10px] text-gray-500 font-medium">La obra no se puede cambiar al editar una función existente.</p>
                     )}
                 </div>
@@ -290,7 +292,7 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                         })}
                     </div>
 
-                    {!initialData && (
+                    {!initialData?.id && (
                         <button
                             type="button"
                             onClick={addFecha}
@@ -323,7 +325,6 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                     <input
                         type="text"
                         list="funcion-salas-list"
-                        required
                         value={formData.salaNombre}
                         onChange={(e) => handleSalaChange(e.target.value)}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
@@ -423,6 +424,22 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                         placeholder="Detalles logísticos o técnicos..."
                     />
+                </div>
+
+                <div className="md:col-span-2 flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+                    <div className="flex flex-col">
+                        <span className="text-sm font-bold text-white">Función Confirmada</span>
+                        <span className="text-xs text-gray-500">Si está desactivado, la función será tentativa (solo visible para admins).</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={formData.confirmada}
+                            onChange={(e) => setFormData({ ...formData, confirmada: e.target.checked })}
+                        />
+                        <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-500"></div>
+                    </label>
                 </div>
             </div>
 

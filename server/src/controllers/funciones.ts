@@ -3,8 +3,15 @@ import prisma from '../lib/prisma.js';
 import { AuthRequest } from '../middleware/auth.js';
 
 export const getFunciones = async (req: AuthRequest, res: Response) => {
+    const isAdmin = req.user?.rol === 'Administrador' || req.user?.rol === 'Admin';
+    const where: any = {};
+    if (!isAdmin) {
+        where.confirmada = true;
+    }
+
     try {
         const funciones = await prisma.funcion.findMany({
+            where,
             include: {
                 obra: {
                     include: { artistaPayouts: true }
@@ -72,7 +79,8 @@ export const createFuncion = async (req: AuthRequest, res: Response) => {
         passVentaTicketera,
         linkMonitoreoVenta,
         notasProduccion,
-        productorAsociadoId
+        productorAsociadoId,
+        confirmada
     } = req.body;
 
     // Normalize dates to an array
@@ -98,6 +106,7 @@ export const createFuncion = async (req: AuthRequest, res: Response) => {
                         linkMonitoreoVenta,
                         notasProduccion,
                         productorAsociadoId,
+                        confirmada: confirmada !== undefined ? confirmada : true,
                     },
                 });
                 results.push(funcion);

@@ -4,22 +4,23 @@ import { ChevronLeft, ChevronRight, MapPin, Ticket } from 'lucide-react';
 interface Funcion {
     id: string;
     fecha: string;
-    salaNombre: string;
+    salaNombre?: string;
     ciudad: string;
     obra: {
         nombre: string;
     };
     vendidas?: number;
     capacidadSala?: number;
+    confirmada?: boolean;
 }
 
 interface CalendarViewProps {
     funciones: Funcion[];
     onEdit: (f: Funcion) => void;
-    onNavigate: (id: string) => void;
+    onDateClick?: (date: Date) => void;
 }
 
-const CalendarView: React.FC<CalendarViewProps> = ({ funciones, onEdit, onNavigate }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ funciones, onEdit, onDateClick }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const getDaysInMonth = (year: number, month: number) => {
@@ -58,23 +59,42 @@ const CalendarView: React.FC<CalendarViewProps> = ({ funciones, onEdit, onNaviga
         });
 
         days.push(
-            <div key={day} className="h-40 bg-[#121212] border border-white/5 p-2 flex flex-col gap-1 overflow-y-auto group hover:bg-white/[0.02] transition-colors relative">
-                <span className="text-xs font-bold text-gray-500 mb-1">{day}</span>
+            <div key={day} className="h-40 bg-[#121212] border border-white/5 p-2 flex flex-col gap-1 overflow-y-auto group transition-colors relative">
+                <div 
+                    onClick={() => onDateClick?.(new Date(year, month, day))}
+                    className="flex flex-col cursor-pointer hover:bg-white/[0.04] -m-2 p-2 mb-1 rounded-t-lg transition-colors"
+                    title="Programar función para este día"
+                >
+                    <span className="text-xs font-bold text-gray-500">{day}</span>
+                </div>
                 {dayFunciones.map(f => (
                     <div
                         key={f.id}
-                        onClick={() => onNavigate(f.id)}
-                        className="p-2 bg-primary-500/10 border border-primary-500/20 rounded-lg cursor-pointer hover:bg-primary-500/20 transition-all group/item"
+                        onClick={() => onEdit(f)}
+                        className={`p-2 border rounded-lg cursor-pointer transition-all group/item ${
+                            f.confirmada === false 
+                                ? 'bg-amber-500/5 border-amber-500/10 border-dashed opacity-75 hover:opacity-100' 
+                                : 'bg-primary-500/10 border-primary-500/20 hover:bg-primary-500/20'
+                        }`}
                     >
-                        <p className="text-[11px] font-black uppercase tracking-tight text-primary-400 truncate">{f.obra.nombre}</p>
+                        <div className="flex items-center justify-between gap-1 overflow-hidden">
+                            <p className={`text-[11px] font-black uppercase tracking-tight truncate ${f.confirmada === false ? 'text-amber-500/70' : 'text-primary-400'}`}>
+                                {f.obra.nombre}
+                            </p>
+                            {f.confirmada === false && (
+                                <span className="text-[8px] font-bold text-amber-600 shrink-0">TENT.</span>
+                            )}
+                        </div>
                         <div className="flex items-center gap-1 text-[9px] text-gray-400 mt-0.5 truncate">
                             <MapPin size={10} />
                             <span>{f.ciudad}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-[9px] text-amber-500 font-bold mt-1">
-                            <Ticket size={10} />
-                            <span>{f.vendidas || 0}/{f.capacidadSala || '-'}</span>
-                        </div>
+                        {f.confirmada !== false && (
+                            <div className="flex items-center gap-1 text-[9px] text-amber-500 font-bold mt-1">
+                                <Ticket size={10} />
+                                <span>{f.vendidas || 0}/{f.capacidadSala || '-'}</span>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

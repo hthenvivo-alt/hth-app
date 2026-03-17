@@ -29,12 +29,13 @@ import {
 interface Funcion {
     id: string;
     fecha: string;
-    salaNombre: string;
+    salaNombre?: string;
     ciudad: string;
     obra: {
         nombre: string;
     };
     vendidas?: number;
+    confirmada?: boolean;
     ultimaFacturacionBruta?: number;
     capacidadSala?: number;
     ultimaActualizacionVentas?: string;
@@ -88,7 +89,7 @@ const Funciones: React.FC = () => {
     const filteredFunciones = funciones?.filter(f => {
         const matchesSearch =
             f.obra.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            f.salaNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            f.salaNombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             f.ciudad.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesObra = !selectedObra || f.obra.nombre === selectedObra;
@@ -111,8 +112,13 @@ const Funciones: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['funciones'] });
     };
 
-    const openCreateModal = () => {
-        setEditingFuncion(null);
+    const openCreateModal = (date?: Date) => {
+        if (date) {
+            // Pass a partial object with the date so FuncionForm can extract it
+            setEditingFuncion({ fecha: date.toISOString() } as any);
+        } else {
+            setEditingFuncion(null);
+        }
         setIsModalOpen(true);
     };
 
@@ -187,7 +193,14 @@ const Funciones: React.FC = () => {
                                             <span className="text-xl font-bold leading-none">{func.fecha ? new Date(func.fecha).getDate() : '-'}</span>
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-lg group-hover:text-primary-400 transition-colors">{func.obra.nombre}</h4>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-bold text-lg group-hover:text-primary-400 transition-colors">{func.obra.nombre}</h4>
+                                                {func.confirmada === false && (
+                                                    <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded text-[9px] font-black uppercase tracking-widest">
+                                                        Tentativa
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center text-gray-500 text-xs mt-1">
                                                 <Clock size={12} className="mr-1" />
                                                 <span>{func.fecha ? new Date(func.fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--'}</span>
@@ -197,7 +210,9 @@ const Funciones: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-5">
                                     <div className="flex flex-col">
-                                        <span className="font-semibold text-gray-300">{func.salaNombre}</span>
+                                        <span className={`font-semibold ${func.salaNombre ? 'text-gray-300' : 'text-gray-500 italic'}`}>
+                                            {func.salaNombre || 'Teatro a confirmar'}
+                                        </span>
                                         <div className="flex items-center text-gray-500 text-xs mt-1">
                                             <MapPin size={12} className="mr-1" />
                                             <span>{func.ciudad}</span>
@@ -354,7 +369,7 @@ const Funciones: React.FC = () => {
                     )}
                     {canManage && (
                         <button
-                            onClick={openCreateModal}
+                            onClick={() => openCreateModal()}
                             className="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-primary-500/20"
                         >
                             <Plus size={20} />
@@ -462,7 +477,7 @@ const Funciones: React.FC = () => {
                     <CalendarView
                         funciones={filteredFunciones}
                         onEdit={openEditModal}
-                        onNavigate={(id) => navigate(`/logistica/${id}`)}
+                        onDateClick={openCreateModal}
                     />
                 )}
             </div>
@@ -470,7 +485,7 @@ const Funciones: React.FC = () => {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={editingFuncion ? 'Editar Función' : 'Programar Función'}
+                title={editingFuncion?.id ? 'Editar Función' : 'Programar Función'}
             >
                 <FuncionForm
                     initialData={editingFuncion}
