@@ -126,27 +126,31 @@ export const createFuncion = async (req: AuthRequest, res: Response) => {
 
         // Automated Billboard Announcement (non-blocking)
         try {
-            const obra = await prisma.obra.findUnique({ where: { id: obraId }, select: { nombre: true } });
-            if (obra) {
-                let mensajeContenido = '';
-                if (createdFunciones.length === 1) {
-                    const f = createdFunciones[0];
-                    const dateStr = f.fecha.toLocaleDateString('es-AR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        timeZone: 'America/Argentina/Buenos_Aires'
-                    });
-                    mensajeContenido = `📣 ¡Nueva función programada!\n**${obra.nombre}** en ${f.salaNombre} (${f.ciudad}) para el día **${dateStr}**.`;
-                } else {
-                    mensajeContenido = `📣 ¡Nuevas funciones programadas!\nSe han agregado **${createdFunciones.length}** nuevas fechas de **${obra.nombre}** en ${salaNombre} (${ciudad}).`;
-                }
+            const confirmedFunciones = createdFunciones.filter(f => f.confirmada === true);
 
-                await prisma.mensaje.create({
-                    data: {
-                        contenido: mensajeContenido,
-                        autorId: req.user!.id,
+            if (confirmedFunciones.length > 0) {
+                const obra = await prisma.obra.findUnique({ where: { id: obraId }, select: { nombre: true } });
+                if (obra) {
+                    let mensajeContenido = '';
+                    if (confirmedFunciones.length === 1) {
+                        const f = confirmedFunciones[0];
+                        const dateStr = f.fecha.toLocaleDateString('es-AR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            timeZone: 'America/Argentina/Buenos_Aires'
+                        });
+                        mensajeContenido = `📣 ¡Nueva función programada!\n**${obra.nombre}** en ${f.salaNombre} (${f.ciudad}) para el día **${dateStr}**.`;
+                    } else {
+                        mensajeContenido = `📣 ¡Nuevas funciones programadas!\nSe han agregado **${confirmedFunciones.length}** nuevas fechas confirmadas de **${obra.nombre}** en ${salaNombre} (${ciudad}).`;
                     }
-                });
+
+                    await prisma.mensaje.create({
+                        data: {
+                            contenido: mensajeContenido,
+                            autorId: req.user!.id,
+                        }
+                    });
+                }
             }
         } catch (error) {
             console.warn('Auto-billboard announcement failed:', error);
@@ -159,16 +163,41 @@ export const createFuncion = async (req: AuthRequest, res: Response) => {
     }
 };
 
-export const updateFuncion = async (req: Request, res: Response) => {
+export const updateFuncion = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const data = req.body;
     if (data.fecha) data.fecha = new Date(data.fecha);
 
     try {
+        const previousFuncion = await prisma.funcion.findUnique({ where: { id: id as string } });
+
         const funcion = await prisma.funcion.update({
             where: { id: id as string },
             data,
+            include: { obra: { select: { nombre: true } } }
         });
+
+        // If previously tentative and now confirmed
+        if (previousFuncion && previousFuncion.confirmada === false && funcion.confirmada === true) {
+            try {
+                const dateStr = funcion.fecha.toLocaleDateString('es-AR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    timeZone: 'America/Argentina/Buenos_Aires'
+                });
+                const mensajeContenido = `📣 ¡Función Confirmada!\n**${funcion.obra.nombre}** en ${funcion.salaNombre} (${funcion.ciudad}) para el día **${dateStr}**.`;
+
+                await prisma.mensaje.create({
+                    data: {
+                        contenido: mensajeContenido,
+                        autorId: req.user!.id,
+                    }
+                });
+            } catch (err) {
+                console.warn('Auto-billboard announcement failed on confirm:', err);
+            }
+        }
+
         res.json(funcion);
     } catch (error) {
         res.status(500).json({ error: 'Error updating funcion' });

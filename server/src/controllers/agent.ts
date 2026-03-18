@@ -78,19 +78,21 @@ export const createAgentFuncion = async (req: AuthRequest, res: Response) => {
 
         // Automated Billboard Announcement (non-blocking)
         try {
-            const dateStr = nuevaFuncion.fecha.toLocaleDateString('es-AR', {
-                day: '2-digit',
-                month: '2-digit',
-                timeZone: 'America/Argentina/Buenos_Aires'
-            });
-            const mensajeContenido = `🤖 **Agente OpenClaw** programó una nueva función:\n**${obra.nombre}** en ${nuevaFuncion.salaNombre} (${nuevaFuncion.ciudad}) para el día **${dateStr}**.`;
+            if (nuevaFuncion.confirmada !== false) {
+                const dateStr = nuevaFuncion.fecha.toLocaleDateString('es-AR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    timeZone: 'America/Argentina/Buenos_Aires'
+                });
+                const mensajeContenido = `🤖 **Agente OpenClaw** programó una nueva función:\n**${obra.nombre}** en ${nuevaFuncion.salaNombre} (${nuevaFuncion.ciudad}) para el día **${dateStr}**.`;
 
-            await prisma.mensaje.create({
-                data: {
-                    contenido: mensajeContenido,
-                    autorId: req.user!.id, // This will be 'external-agent' from middleware
-                }
-            });
+                await prisma.mensaje.create({
+                    data: {
+                        contenido: mensajeContenido,
+                        autorId: req.user!.id, // This will be 'external-agent' from middleware
+                    }
+                });
+            }
         } catch (error) {
             console.warn('Auto-billboard announcement failed for agent:', error);
         }
