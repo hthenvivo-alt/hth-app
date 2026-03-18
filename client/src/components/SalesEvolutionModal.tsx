@@ -51,12 +51,17 @@ const SalesEvolutionModal: React.FC<SalesEvolutionModalProps> = ({
 
     const chartData = React.useMemo(() => {
         if (!ventas) return [];
-        return ventas.map(v => ({
-            fecha: new Date(v.fechaRegistro).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
-            fullFecha: new Date(v.fechaRegistro).toLocaleString('es-AR'),
-            vendidas: v.entradasVendidas,
-            tipo: v.tipoVenta
-        }));
+        return ventas.map((v, i) => {
+            const date = new Date(v.fechaRegistro);
+            const fechaStr = date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+            return {
+                uniqueKey: `${fechaStr}-${i}`,
+                fecha: fechaStr,
+                fullFecha: date.toLocaleString('es-AR'),
+                vendidas: v.entradasVendidas,
+                tipo: v.tipoVenta
+            };
+        });
     }, [ventas]);
 
     const latestVenta = ventas && ventas.length > 0 ? ventas[ventas.length - 1] : null;
@@ -138,7 +143,8 @@ const SalesEvolutionModal: React.FC<SalesEvolutionModalProps> = ({
                                     <LineChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                         <XAxis
-                                            dataKey="fecha"
+                                            dataKey="uniqueKey"
+                                            tickFormatter={(val) => (val ? val.toString().split('-')[0] : '')}
                                             stroke="#444"
                                             fontSize={10}
                                             fontWeight="900"
@@ -180,13 +186,14 @@ const SalesEvolutionModal: React.FC<SalesEvolutionModalProps> = ({
                                             }}
                                         />
                                         <Line
-                                            type="monotone"
+                                            type="linear"
                                             dataKey="vendidas"
                                             stroke="#eab308"
                                             strokeWidth={4}
                                             dot={{ r: 4, strokeWidth: 2, fill: '#000' }}
                                             activeDot={{ r: 8, strokeWidth: 0, fill: '#eab308' }}
                                             animationDuration={1500}
+                                            label={{ position: 'top', fill: '#eab308', fontSize: 12, fontWeight: 900, dy: -5 }}
                                         />
                                     </LineChart>
                                 </ResponsiveContainer>

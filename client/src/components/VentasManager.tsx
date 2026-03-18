@@ -140,14 +140,22 @@ const VentasManager: React.FC<Props> = ({ funcionId }) => {
                 </div>
                 {isLoading ? (
                     <div className="flex justify-center p-4"><Loader2 className="animate-spin text-primary-500" /></div>
-                ) : history?.map((v: any) => (
+                ) : history?.map((v: any, index: number) => {
+                    const prevEntry = index < history.length - 1 ? history[index + 1] : null;
+                    const diff = prevEntry ? v.entradasVendidas - prevEntry.entradasVendidas : v.entradasVendidas;
+                    const diffText = diff >= 0 ? `+${diff}` : `${diff}`;
+
+                    return (
                     <div key={v.id} className="flex items-center justify-between p-3 bg-white/[0.01] border border-white/5 rounded-xl group">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-primary-500/10 rounded-lg">
                                 <Ticket className="text-primary-500" size={16} />
                             </div>
                             <div>
-                                <p className="text-sm font-bold">+{v.entradasVendidas} entradas</p>
+                                <div className="flex items-baseline gap-2">
+                                    <p className="text-sm font-bold">{v.entradasVendidas} total</p>
+                                    <span className="text-xs text-primary-500 font-bold">({diffText} entradas)</span>
+                                </div>
                                 <p className="text-[10px] text-gray-500">
                                     {v.tipoVenta} • {v.canalVenta} • {formatDate(v.fechaRegistro)}
                                 </p>
@@ -168,7 +176,8 @@ const VentasManager: React.FC<Props> = ({ funcionId }) => {
                             </button>
                         </div>
                     </div>
-                ))}
+                );
+                })}
             </div>
         </div>
     );
