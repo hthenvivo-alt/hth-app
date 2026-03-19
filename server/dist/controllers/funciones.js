@@ -1,10 +1,16 @@
 import prisma from '../lib/prisma.js';
 export const getFunciones = async (req, res) => {
+    const isAdmin = req.user?.rol === 'Administrador' || req.user?.rol === 'Admin';
+    const where = {};
+    if (!isAdmin) {
+        where.confirmada = true;
+    }
     try {
         const funciones = await prisma.funcion.findMany({
+            where,
             include: {
                 obra: {
-                    include: { artistaPayouts: true }
+                    include: { artistaPayouts: true, deducciones: true }
                 },
                 productorAsociado: {
                     select: { nombre: true, apellido: true }
@@ -49,7 +55,7 @@ export const getFunciones = async (req, res) => {
 };
 export const createFuncion = async (req, res) => {
     const { obraId, fecha, fechas, // New field for bulk creation
-    salaNombre, salaDireccion, ciudad, pais, capacidadSala, precioEntradaBase, linkVentaTicketera, userVentaTicketera, passVentaTicketera, linkMonitoreoVenta, notasProduccion, productorAsociadoId } = req.body;
+    salaNombre, salaDireccion, ciudad, pais, capacidadSala, precioEntradaBase, linkVentaTicketera, userVentaTicketera, passVentaTicketera, linkMonitoreoVenta, notasProduccion, productorAsociadoId, confirmada } = req.body;
     // Normalize dates to an array
     const dateList = Array.isArray(fechas) ? fechas : [fecha];
     try {
@@ -72,6 +78,7 @@ export const createFuncion = async (req, res) => {
                         linkMonitoreoVenta,
                         notasProduccion,
                         productorAsociadoId,
+                        confirmada: confirmada !== undefined ? confirmada : true,
                     },
                 });
                 results.push(funcion);
@@ -90,23 +97,30 @@ export const createFuncion = async (req, res) => {
         }
         // Automated Billboard Announcement (non-blocking)
         try {
-            const obra = await prisma.obra.findUnique({ where: { id: obraId }, select: { nombre: true } });
-            if (obra) {
-                let mensajeContenido = '';
-                if (createdFunciones.length === 1) {
-                    const f = createdFunciones[0];
-                    const dateStr = f.fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-                    mensajeContenido = `📣 ¡Nueva función programada!\n**${obra.nombre}** en ${f.salaNombre} (${f.ciudad}) para el día **${dateStr}**.`;
-                }
-                else {
-                    mensajeContenido = `📣 ¡Nuevas funciones programadas!\nSe han agregado **${createdFunciones.length}** nuevas fechas de **${obra.nombre}** en ${salaNombre} (${ciudad}).`;
-                }
-                await prisma.mensaje.create({
-                    data: {
-                        contenido: mensajeContenido,
-                        autorId: req.user.id,
+            const confirmedFunciones = createdFunciones.filter(f => f.confirmada === true);
+            if (confirmedFunciones.length > 0) {
+                const obra = await prisma.obra.findUnique({ where: { id: obraId }, select: { nombre: true } });
+                if (obra) {
+                    let mensajeContenido = '';
+                    if (confirmedFunciones.length === 1) {
+                        const f = confirmedFunciones[0];
+                        const dateStr = f.fecha.toLocaleDateString('es-AR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            timeZone: 'America/Argentina/Buenos_Aires'
+                        });
+                        mensajeContenido = `📣 ¡Nueva función programada!\n**${obra.nombre}** en ${f.salaNombre} (${f.ciudad}) para el día **${dateStr}**.`;
                     }
-                });
+                    else {
+                        mensajeContenido = `📣 ¡Nuevas funciones programadas!\nSe han agregado **${confirmedFunciones.length}** nuevas fechas confirmadas de **${obra.nombre}** en ${salaNombre} (${ciudad}).`;
+                    }
+                    await prisma.mensaje.create({
+                        data: {
+                            contenido: mensajeContenido,
+                            autorId: req.user.id,
+                        }
+                    });
+                }
             }
         }
         catch (error) {
@@ -125,10 +139,32 @@ export const updateFuncion = async (req, res) => {
     if (data.fecha)
         data.fecha = new Date(data.fecha);
     try {
+        const previousFuncion = await prisma.funcion.findUnique({ where: { id: id } });
         const funcion = await prisma.funcion.update({
             where: { id: id },
             data,
+            include: { obra: { select: { nombre: true } } }
         });
+        // If previously tentative and now confirmed
+        if (previousFuncion && previousFuncion.confirmada === false && funcion.confirmada === true) {
+            try {
+                const dateStr = funcion.fecha.toLocaleDateString('es-AR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    timeZone: 'America/Argentina/Buenos_Aires'
+                });
+                const mensajeContenido = `📣 ¡Función Confirmada!\n**${funcion.obra.nombre}** en ${funcion.salaNombre} (${funcion.ciudad}) para el día **${dateStr}**.`;
+                await prisma.mensaje.create({
+                    data: {
+                        contenido: mensajeContenido,
+                        autorId: req.user.id,
+                    }
+                });
+            }
+            catch (err) {
+                console.warn('Auto-billboard announcement failed on confirm:', err);
+            }
+        }
         res.json(funcion);
     }
     catch (error) {

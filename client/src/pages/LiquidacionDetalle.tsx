@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import { generateLiquidacionPDF } from '../utils/pdfGenerator';
@@ -54,6 +54,9 @@ interface LiquidacionReparto {
 const LiquidacionDetalle: React.FC = () => {
     const { funcionId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const fromGrupalId = searchParams.get('grupalId');
     const queryClient = useQueryClient();
     const [showComprobantesModal, setShowComprobantesModal] = useState(false);
     const [uploadingComprobantes, setUploadingComprobantes] = useState(false);
@@ -111,6 +114,7 @@ const LiquidacionDetalle: React.FC = () => {
     const [moneda, setMoneda] = useState<'ARS' | 'USD' | 'EUR'>('ARS');
     const [tipoCambio, setTipoCambio] = useState<number | string | ''>(1);
     const [impuestoTransferenciaPorcentaje, setImpuestoTransferenciaPorcentaje] = useState<number | string | ''>(1.2);
+    const [aporteAAAProductora, setAporteAAAProductora] = useState<number | string | ''>(0);
     const [bordereauxImage, setBordereauxImage] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [isEditingOverride, setIsEditingOverride] = useState(false);
@@ -118,6 +122,24 @@ const LiquidacionDetalle: React.FC = () => {
     // Initial Load Logic
     useEffect(() => {
         if (!funcion) return;
+
+        // Helper: build default deduction items from obra.deducciones
+        const getObraDefaultItems = (): LiquidacionItem[] => {
+            if (funcion?.obra?.deducciones && funcion.obra.deducciones.length > 0) {
+                return funcion.obra.deducciones.map((d: any) => ({
+                    tipo: 'Deduccion' as const,
+                    concepto: d.nombre,
+                    porcentaje: d.porcentaje ? Number(d.porcentaje) : '',
+                    monto: d.monto ? Number(d.monto) : '',
+                    deduceAntesDeSala: d.deduceAntesDeSala ?? true
+                }));
+            }
+            // Absolute last resort defaults
+            return [
+                { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '', deduceAntesDeSala: true },
+                { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '', deduceAntesDeSala: true }
+            ];
+        };
 
         // 1. Initial Defaults or Saved Data
         if (existingLiquidacion && existingLiquidacion.id) {
@@ -166,7 +188,7 @@ const LiquidacionDetalle: React.FC = () => {
             }
 
             // Items (Deductions/Expenses)
-            const fetchedItems = Array.isArray(existingLiquidacion.items) ? existingLiquidacion.items.map((i: any) => ({
+            let fetchedItems = Array.isArray(existingLiquidacion.items) ? existingLiquidacion.items.map((i: any) => ({
                 ...i,
                 porcentaje: i.tipo === 'Gasto' ? '' : (i.porcentaje ? Number(i.porcentaje) || 0 : ''),
                 monto: Number(i.monto) || 0,
@@ -183,6 +205,13 @@ const LiquidacionDetalle: React.FC = () => {
                     fetchedItems[idx].monto = existingLiquidacion.gastosCajaSum;
                 }
             }
+
+            // If no deductions were saved yet, seed from obra.deducciones
+            const hasDeductions = fetchedItems.some((i: any) => i.tipo === 'Deduccion');
+            if (!hasDeductions) {
+                fetchedItems = [...getObraDefaultItems(), ...fetchedItems];
+            }
+
             setItems(fetchedItems);
         } else if (liquidacionSuggestions && liquidacionSuggestions.length > 0) {
             // Priority 2: New Settlement (Suggestions from previous function same Obra/Sala)
@@ -208,7 +237,11 @@ const LiquidacionDetalle: React.FC = () => {
                 deduceAntesDeSala: item.deduceAntesDeSala ?? true
             })).filter((i: any) => i.concepto !== 'Gastos de Caja (Registro)');
 
-            setItems(suggestedItems);
+            // If suggestions have no deductions, add obra defaults
+            const suggestionsHaveDeductions = suggestedItems.some((i: any) => i.tipo === 'Deduccion');
+            const finalItems = suggestionsHaveDeductions ? suggestedItems : [...getObraDefaultItems(), ...suggestedItems];
+
+            setItems(finalItems);
         } else {
             // Priority 3: Fallback defaults
             setFacturacionTotal(Number(funcion.ultimaFacturacionBruta) || 0);
@@ -225,12 +258,7 @@ const LiquidacionDetalle: React.FC = () => {
                 })));
             }
 
-            // Default deductions if no suggestions
-            const defaultItems: LiquidacionItem[] = [
-                { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '', deduceAntesDeSala: true },
-                { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '', deduceAntesDeSala: true }
-            ];
-            setItems(defaultItems);
+            setItems(getObraDefaultItems());
         }
     }, [funcion, existingLiquidacion, liquidacionSuggestions]);
 
@@ -289,7 +317,8 @@ const LiquidacionDetalle: React.FC = () => {
         .filter(item => item.tipo === 'Gasto')
         .reduce((acc, item) => acc + (Number(item.monto) || 0), 0);
 
-    const rawResultadoFuncion = Math.round((resultadoCompania - totalGastos - impuestoTransferencias) * 100) / 100;
+    const valAporteAAAProductora = safeEvaluate(aporteAAAProductora);
+    const rawResultadoFuncion = Math.round((resultadoCompania - totalGastos - impuestoTransferencias - valAporteAAAProductora) * 100) / 100;
     const isRevenueOnly = repartos.length > 0 && !repartos.some(r => r.base === 'Utilidad');
 
     // Artists Split Calculation
@@ -301,8 +330,10 @@ const LiquidacionDetalle: React.FC = () => {
         else if (r.base === 'Utilidad') monto = (rawResultadoFuncion * p) / 100;
 
         const roundedMonto = Math.round(monto * 100) / 100;
-        // Strictly use manual retention value
-        const retencionAAA = Number(r.retencionAAA) || 0;
+        // If retencionAAA is not manually set, auto-calculate as 6%
+        const retencionAAA = (r.aplicaAAA && (Number(r.retencionAAA) === 0 || r.retencionAAA === undefined))
+            ? Math.round(roundedMonto * 0.06 * 100) / 100
+            : Number(r.retencionAAA) || 0;
 
         return { ...r, monto: roundedMonto, retencionAAA };
     });
@@ -526,13 +557,18 @@ const LiquidacionDetalle: React.FC = () => {
                 moneda,
                 tipoCambio,
                 impuestoTransferenciaPorcentaje,
+                aporteAAAProductora,
                 bordereauxImage
             });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['liquidacion', funcionId] });
             queryClient.invalidateQueries({ queryKey: ['funciones-liquidacion'] });
-            navigate('/liquidacion');
+            if (fromGrupalId) {
+                navigate(`/liquidacion/grupal/${fromGrupalId}`);
+            } else {
+                navigate('/liquidacion');
+            }
         },
         onError: (error: any) => {
             console.error('Error saving liquidacion:', error);
@@ -856,11 +892,8 @@ const LiquidacionDetalle: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Right Column: Expenses & Result */}
-                <div className="space-y-8">
-                    {/* 3. Acuerdo & Company Result */}
+                    {/* 3. Acuerdo Sala */}
                     <div className="bg-[#1E1E1E] p-6 rounded-2xl border border-white/5">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-bold">Acuerdo Sala</h3>
@@ -892,16 +925,45 @@ const LiquidacionDetalle: React.FC = () => {
                                 </select>
                             </div>
                         </div>
-                        <div className="flex justify-between items-center text-gray-400 mb-2">
+                        <div className="flex justify-between items-center text-white font-bold text-lg">
                             <span>Monto Sala</span>
                             <span>{symbol} {montoAcuerdo.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
-                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                            <span className="text-gray-400">Compañía HTH</span>
+                    </div>
+
+                    {/* 4. Compañía Box */}
+                    <div className="bg-[#1E1E1E] p-6 rounded-2xl border border-white/5">
+                        <div className="flex justify-between items-center text-white font-bold text-lg">
+                            <span>Compañía</span>
                             <span>{symbol} {resultadoCompania.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                     </div>
 
+                    {/* 5. Totales Summary Box */}
+                    <div className="bg-[#1E1E1E] p-6 rounded-2xl border border-white/5 space-y-4">
+                        <div className="flex justify-between items-center text-lg text-white font-bold">
+                            <span>Total Artística función</span>
+                            <span>- {symbol} {totalRepartoArtistas.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-lg text-white font-bold pt-4 border-t border-white/5">
+                            <span>Total gastos función</span>
+                            <span>- {symbol} {(totalGastos + impuestoTransferencias + valAporteAAAProductora).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                    </div>
+
+                    {/* 5. Resultado Producción (MOVED FROM RIGHT) */}
+                    <div className="p-6 bg-primary-500/10 rounded-2xl border border-primary-500/20 space-y-3">
+                        <div className="flex justify-between items-center">
+                            <div className="flex flex-col">
+                                <span className="font-bold text-white uppercase tracking-tight">Resultado Producción</span>
+                            </div>
+                            <span className="text-2xl font-black text-primary-400">{symbol} {repartoProduccionMonto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Column: Expenses & Result */}
+                <div className="space-y-8">
                     {/* 4. Gastos Compañía */}
                     <div className="bg-[#1E1E1E] p-6 rounded-2xl border border-white/5">
                         <div className="flex justify-between items-center mb-4">
@@ -951,9 +1013,54 @@ const LiquidacionDetalle: React.FC = () => {
                                 )
                             })}
 
+                            <div className="flex justify-between items-center py-2 px-3 bg-amber-500/5 border border-amber-500/10 rounded text-sm text-gray-400">
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-amber-400 uppercase text-[10px] tracking-widest">Aporte AAA Productora <span className="text-gray-500">(6%)</span></span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAporteAAAProductora(Math.round(totalRepartoArtistas * 0.06 * 100) / 100)}
+                                        className="text-[9px] text-gray-600 hover:text-amber-400 transition-colors text-left mt-0.5"
+                                    >
+                                        ↺ Recalcular 6% de ${totalRepartoArtistas.toLocaleString('es-AR')}
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-600">{symbol}</span>
+                                    <input
+                                        type="text"
+                                        value={aporteAAAProductora}
+                                        onChange={(e) => setAporteAAAProductora(e.target.value)}
+                                        onFocus={() => {
+                                            if (Number(aporteAAAProductora) === 0) {
+                                                setAporteAAAProductora(Math.round(totalRepartoArtistas * 0.06 * 100) / 100);
+                                            }
+                                        }}
+                                        onBlur={(e) => {
+                                            const v = parseFloat(e.target.value);
+                                            if (!isNaN(v)) setAporteAAAProductora(v);
+                                        }}
+                                        className="w-24 bg-black/20 border border-white/10 rounded px-2 py-0.5 text-right text-xs font-bold text-amber-400 focus:border-amber-500 outline-none"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="flex justify-between items-center py-2 px-3 bg-white/5 rounded text-sm text-gray-400">
-                                <span>Impuesto Transferencias ({impuestoTransferenciaPorcentaje}%)</span>
-                                <span>{symbol} {impuestoTransferencias.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span>Impuesto Transferencias ({valImpuestoTransferenciaPorcentaje}%)</span>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={impuestoTransferenciaPorcentaje}
+                                        onChange={(e) => setImpuestoTransferenciaPorcentaje(e.target.value)}
+                                        onBlur={(e) => {
+                                            const v = parseFloat(e.target.value);
+                                            if (!isNaN(v)) setImpuestoTransferenciaPorcentaje(v);
+                                        }}
+                                        className="w-12 bg-black/20 border border-white/10 rounded px-2 py-0.5 text-right text-xs font-bold text-gray-300 focus:border-primary-500 outline-none"
+                                    />
+                                    <span className="text-xs text-gray-500">%</span>
+                                    <span className="font-bold text-white">{symbol} {impuestoTransferencias.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
                             </div>
 
                             {/* Comprobantes Section */}
@@ -1037,7 +1144,16 @@ const LiquidacionDetalle: React.FC = () => {
                                         <span className="font-black text-white">{symbol} {reparto.monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Retención AAA</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Retención AAA <span className="text-primary-400">(6%)</span></span>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateReparto(idx, 'retencionAAA', Math.round(reparto.monto * 0.06 * 100) / 100)}
+                                                className="text-[9px] text-gray-600 hover:text-primary-400 transition-colors text-left mt-0.5"
+                                            >
+                                                ↺ Recalcular 6%
+                                            </button>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs text-gray-600">$</span>
                                             <input
@@ -1065,17 +1181,6 @@ const LiquidacionDetalle: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
-
-                            {/* HTH Result Visualization */}
-                            <div className="p-3 bg-white/5 rounded-xl border border-white/5 space-y-3">
-                                <div className="flex justify-between items-center text-sm">
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-white uppercase tracking-tight">HTH PRODUCCIÓN / GESTIÓN</span>
-                                        <span className="text-[10px] text-gray-500 uppercase font-bold">{calcRepartoProduccionPorcentaje}% sobre Utilidad</span>
-                                    </div>
-                                    <span className="font-black text-white">{symbol} {repartoProduccionMonto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1104,7 +1209,7 @@ const LiquidacionDetalle: React.FC = () => {
                             disabled={saveMutation.isPending}
                         >
                             <Save size={18} />
-                            <span className="hidden sm:inline">Guardar Borrador</span>
+                            <span className="hidden sm:inline">Guardar</span>
                             <span className="inline sm:hidden">Guardar</span>
                         </button>
                         <button

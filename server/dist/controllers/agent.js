@@ -69,14 +69,20 @@ export const createAgentFuncion = async (req, res) => {
         });
         // Automated Billboard Announcement (non-blocking)
         try {
-            const dateStr = nuevaFuncion.fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-            const mensajeContenido = `🤖 **Agente OpenClaw** programó una nueva función:\n**${obra.nombre}** en ${nuevaFuncion.salaNombre} (${nuevaFuncion.ciudad}) para el día **${dateStr}**.`;
-            await prisma.mensaje.create({
-                data: {
-                    contenido: mensajeContenido,
-                    autorId: req.user.id, // This will be 'external-agent' from middleware
-                }
-            });
+            if (nuevaFuncion.confirmada !== false) {
+                const dateStr = nuevaFuncion.fecha.toLocaleDateString('es-AR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    timeZone: 'America/Argentina/Buenos_Aires'
+                });
+                const mensajeContenido = `🤖 **Agente OpenClaw** programó una nueva función:\n**${obra.nombre}** en ${nuevaFuncion.salaNombre} (${nuevaFuncion.ciudad}) para el día **${dateStr}**.`;
+                await prisma.mensaje.create({
+                    data: {
+                        contenido: mensajeContenido,
+                        autorId: req.user.id, // This will be 'external-agent' from middleware
+                    }
+                });
+            }
         }
         catch (error) {
             console.warn('Auto-billboard announcement failed for agent:', error);
@@ -88,15 +94,66 @@ export const createAgentFuncion = async (req, res) => {
         res.status(500).json({ error: 'Error creating funcion via agent' });
     }
 };
+export const updateAgentFuncion = async (req, res) => {
+    const { id } = req.params;
+    const { obraId, fecha, precioBase, salaNombre, ciudad, capacidadSala } = req.body;
+    if (!id) {
+        return res.status(400).json({ error: 'Missing funcion ID' });
+    }
+    try {
+        const updateData = {};
+        if (obraId)
+            updateData.obraId = obraId;
+        if (fecha)
+            updateData.fecha = new Date(fecha);
+        if (precioBase !== undefined)
+            updateData.precioEntradaBase = precioBase;
+        if (salaNombre)
+            updateData.salaNombre = salaNombre;
+        if (ciudad)
+            updateData.ciudad = ciudad;
+        if (capacidadSala !== undefined)
+            updateData.capacidadSala = capacidadSala;
+        const updatedFuncion = (await prisma.funcion.update({
+            where: { id: id },
+            data: updateData,
+            include: { obra: { select: { nombre: true } } }
+        }));
+        // Automated Billboard Announcement (non-blocking)
+        try {
+            const dateStr = updatedFuncion.fecha.toLocaleDateString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                timeZone: 'America/Argentina/Buenos_Aires'
+            });
+            const mensajeContenido = `🤖 **Agente OpenClaw** actualizó la función:\n**${updatedFuncion.obra.nombre}** en ${updatedFuncion.salaNombre} (${updatedFuncion.ciudad}) para el día **${dateStr}**.`;
+            await prisma.mensaje.create({
+                data: {
+                    contenido: mensajeContenido,
+                    autorId: req.user.id,
+                }
+            });
+        }
+        catch (error) {
+            console.warn('Auto-billboard announcement failed for agent update:', error);
+        }
+        res.json(updatedFuncion);
+    }
+    catch (error) {
+        console.error('Agent update funcion error:', error);
+        res.status(500).json({ error: 'Error updating funcion via agent' });
+    }
+};
 export const getAgentFunciones = async (req, res) => {
     try {
         const funciones = await prisma.funcion.findMany({
             include: {
-                obra: { select: { nombre: true } }
+                obra: { select: { nombre: true } },
+                liquidacion: { select: { recaudacionBruta: true, confirmada: true } }
             },
             orderBy: { fecha: 'desc' }
         });
-        const formattedFunciones = funciones.map(f => ({
+        const formattedFunciones = funciones.map((f) => ({
             id: f.id,
             obra: f.obra.nombre,
             fecha: f.fecha,
@@ -106,7 +163,9 @@ export const getAgentFunciones = async (req, res) => {
             capacidadTotal: f.capacidadSala || 0,
             porcentajeOcupacion: f.capacidadSala && f.capacidadSala > 0
                 ? Math.round((f.vendidas / f.capacidadSala) * 100)
-                : 0
+                : 0,
+            ingresoBruto: f.liquidacion?.recaudacionBruta || 0,
+            liquidacionConfirmada: f.liquidacion?.confirmada || false
         }));
         res.json({
             count: formattedFunciones.length,
@@ -116,5 +175,39 @@ export const getAgentFunciones = async (req, res) => {
     catch (error) {
         console.error('Agent get funciones error:', error);
         res.status(500).json({ error: 'Error fetching funciones via agent' });
+    }
+};
+export const getAgentFuncionDetail = async (req, res) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).json({ error: 'Missing funcion ID' });
+    }
+    try {
+        const funcion = await prisma.funcion.findUnique({
+            where: { id: id },
+            include: {
+                obra: {
+                    include: {
+                        artistaPayouts: true
+                    }
+                },
+                ventas: true,
+                gastos: true,
+                liquidacion: {
+                    include: {
+                        items: true,
+                        repartos: true
+                    }
+                }
+            }
+        });
+        if (!funcion) {
+            return res.status(404).json({ error: 'Funcion not found' });
+        }
+        res.json(funcion);
+    }
+    catch (error) {
+        console.error('Agent get funcion detail error:', error);
+        res.status(500).json({ error: 'Error fetching funcion detail via agent' });
     }
 };

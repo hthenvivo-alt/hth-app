@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js';
+import { Readable } from 'stream';
 import { createObraDriveFolder, uploadFileToDrive, listFilesFromDriveFolder } from '../services/googleService.js';
 export const getObraDocuments = async (req, res) => {
     try {
@@ -110,5 +111,3 @@ export const searchAllDocuments = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-// Also need Readable for the buffer stream
-import { Readable } from 'stream';

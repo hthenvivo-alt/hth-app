@@ -1,4 +1,4 @@
-import { getGoogleAuthUrl, createOAuth2Client } from '../services/googleService.js';
+import { getGoogleAuthUrl, createOAuth2Client, getAuthClientForUser } from '../services/googleService.js';
 import prisma from '../lib/prisma.js';
 export const authGoogle = async (req, res) => {
     const userId = req.user?.id;
@@ -22,11 +22,13 @@ export const googleCallback = async (req, res) => {
                 googleTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
             },
         });
-        res.redirect('http://localhost:5173/settings?status=success');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/settings?status=success`);
     }
     catch (error) {
         console.error('Google callback error:', error);
-        res.redirect('http://localhost:5173/settings?status=error');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/settings?status=error`);
     }
 };
 export const getStatus = async (req, res) => {
@@ -40,7 +42,54 @@ export const getStatus = async (req, res) => {
             email: true
         }
     });
-    res.json({ isLinked: !!user?.googleRefreshToken });
+    if (!user?.googleRefreshToken) {
+        return res.json({ isLinked: false });
+    }
+    try {
+        // Active check: Try to refresh/get token
+        const client = await getAuthClientForUser(userId);
+        await client.getAccessToken();
+        res.json({ isLinked: true });
+    }
+    catch (error) {
+        const errorMsg = error.message || '';
+        const isInvalid = errorMsg.includes('invalid_grant') ||
+            (error.response?.data?.error === 'invalid_grant');
+        if (isInvalid) {
+            // Token is dead, clear it to stay in sync
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    googleAccessToken: null,
+                    googleRefreshToken: null,
+                    googleTokenExpiry: null
+                }
+            });
+            return res.json({ isLinked: false });
+        }
+        // Other errors (network, etc) we treat as linked but warn
+        res.json({ isLinked: true, warning: 'Check failed but token exists' });
+    }
+};
+export const disconnectGoogle = async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId)
+        return res.status(401).json({ error: 'Unauthorized' });
+    try {
+        await prisma.user.update({
+            where: { id: userId },
+            data: {
+                googleAccessToken: null,
+                googleRefreshToken: null,
+                googleTokenExpiry: null
+            }
+        });
+        res.json({ message: 'Cuenta de Google desvinculada correctamente' });
+    }
+    catch (error) {
+        console.error('Disconnect error:', error);
+        res.status(500).json({ error: error.message || 'Error al desvincular cuenta' });
+    }
 };
 export const syncDrive = async (req, res) => {
     try {

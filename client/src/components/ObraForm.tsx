@@ -15,6 +15,14 @@ interface ArtistaPayout {
     base: 'Bruta' | 'Neta' | 'Utilidad';
 }
 
+interface ObraDeduccion {
+    id?: string;
+    nombre: string;
+    porcentaje: number | '';
+    monto: number | '';
+    deduceAntesDeSala: boolean;
+}
+
 const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel }) => {
     const [formData, setFormData] = useState({
         nombre: '',
@@ -24,6 +32,7 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
         fechaEstreno: '',
     });
     const [artistaPayouts, setArtistaPayouts] = useState<ArtistaPayout[]>([]);
+    const [deducciones, setDeducciones] = useState<ObraDeduccion[]>([]);
     const [selectedArtistas, setSelectedArtistas] = useState<string[]>([]);
     const [availableArtistas, setAvailableArtistas] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -49,6 +58,14 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
                     porcentaje: Number(p.porcentaje)
                 })));
             }
+            if (initialData.deducciones) {
+                setDeducciones(initialData.deducciones.map((d: any) => ({
+                    ...d,
+                    porcentaje: d.porcentaje ? Number(d.porcentaje) : '',
+                    monto: d.monto ? Number(d.monto) : '',
+                    deduceAntesDeSala: d.deduceAntesDeSala ?? true
+                })));
+            }
             if (initialData.artistas) {
                 setSelectedArtistas(initialData.artistas.map((a: any) => a.id));
             }
@@ -69,6 +86,20 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
         setArtistaPayouts(newPayouts);
     };
 
+    const addDeduccion = () => {
+        setDeducciones([...deducciones, { nombre: '', porcentaje: '', monto: '', deduceAntesDeSala: true }]);
+    };
+
+    const removeDeduccion = (index: number) => {
+        setDeducciones(deducciones.filter((_, i) => i !== index));
+    };
+
+    const updateDeduccion = (index: number, field: keyof ObraDeduccion, value: any) => {
+        const newDeds = [...deducciones];
+        newDeds[index] = { ...newDeds[index], [field]: value };
+        setDeducciones(newDeds);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -79,6 +110,11 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
             artistaPayouts: artistaPayouts.map(p => ({
                 ...p,
                 porcentaje: Number(p.porcentaje) || 0
+            })),
+            deducciones: deducciones.map(d => ({
+                ...d,
+                porcentaje: d.porcentaje === '' ? null : Number(d.porcentaje),
+                monto: d.monto === '' ? null : Number(d.monto)
             })),
             artistas: selectedArtistas
         };
@@ -239,6 +275,72 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
                                         <button
                                             type="button"
                                             onClick={() => removeArtista(idx)}
+                                            className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Deducciones Section */}
+                <div className="md:col-span-2 p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-primary-500">Deducciones por Defecto (Argentores, AADET, etc.)</h3>
+                        <button
+                            type="button"
+                            onClick={addDeduccion}
+                            className="text-xs py-1 px-3 bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 border border-primary-500/20 rounded-lg transition-all font-bold"
+                        >
+                            + Agregar Deducción
+                        </button>
+                    </div>
+
+                    {deducciones.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">No hay deducciones configuradas.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {deducciones.map((d, idx) => (
+                                <div key={idx} className="grid grid-cols-12 gap-3 items-end bg-white/5 p-4 rounded-xl border border-white/5">
+                                    <div className="col-span-4">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Concepto</label>
+                                        <input
+                                            type="text"
+                                            value={d.nombre}
+                                            onChange={(e) => updateDeduccion(idx, 'nombre', e.target.value)}
+                                            className="w-full bg-transparent border-b border-white/10 text-sm focus:border-primary-500 outline-none transition-all pb-1"
+                                            placeholder="Ej: Argentores"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="col-span-3">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">%</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={d.porcentaje}
+                                            onChange={(e) => updateDeduccion(idx, 'porcentaje', e.target.value)}
+                                            className="w-full bg-transparent border-b border-white/10 text-sm focus:border-primary-500 outline-none transition-all pb-1 text-center"
+                                            placeholder="2"
+                                        />
+                                    </div>
+                                    <div className="col-span-4">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Monto Fijo ($)</label>
+                                        <input
+                                            type="number"
+                                            value={d.monto}
+                                            onChange={(e) => updateDeduccion(idx, 'monto', e.target.value)}
+                                            className="w-full bg-transparent border-b border-white/10 text-sm focus:border-primary-500 outline-none transition-all pb-1 text-center"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="col-span-1 flex justify-end pb-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => removeDeduccion(idx)}
                                             className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>

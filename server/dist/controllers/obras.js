@@ -7,6 +7,7 @@ export const getObras = async (req, res) => {
                     select: { nombre: true, apellido: true }
                 },
                 artistaPayouts: true,
+                deducciones: true,
                 artistas: {
                     select: { id: true, nombre: true, apellido: true, email: true }
                 }
@@ -19,7 +20,7 @@ export const getObras = async (req, res) => {
     }
 };
 export const createObra = async (req, res) => {
-    const { nombre, artistaPrincipal, descripcion, estado, fechaEstreno, artistaPayouts, artistas } = req.body;
+    const { nombre, artistaPrincipal, descripcion, estado, fechaEstreno, artistaPayouts, deducciones, artistas } = req.body;
     try {
         const obra = await prisma.obra.create({
             data: {
@@ -36,11 +37,19 @@ export const createObra = async (req, res) => {
                         base: p.base
                     })) || []
                 },
+                deducciones: {
+                    create: deducciones?.map((d) => ({
+                        nombre: d.nombre,
+                        porcentaje: d.porcentaje || null,
+                        monto: d.monto || null,
+                        deduceAntesDeSala: d.deduceAntesDeSala ?? true
+                    })) || []
+                },
                 artistas: {
                     connect: artistas?.map((id) => ({ id })) || []
                 }
             },
-            include: { artistaPayouts: true, artistas: true }
+            include: { artistaPayouts: true, deducciones: true, artistas: true }
         });
         // Automated Drive Folder Creation (non-blocking)
         try {
@@ -59,7 +68,7 @@ export const createObra = async (req, res) => {
 };
 export const updateObra = async (req, res) => {
     const { id } = req.params;
-    const { nombre, artistaPrincipal, descripcion, estado, fechaEstreno, artistaPayouts, artistas } = req.body;
+    const { nombre, artistaPrincipal, descripcion, estado, fechaEstreno, artistaPayouts, deducciones, artistas } = req.body;
     try {
         // Use a transaction to ensure atomic update of obra and its payouts
         const obra = await prisma.$transaction(async (tx) => {
@@ -91,9 +100,24 @@ export const updateObra = async (req, res) => {
                     }))
                 });
             }
+            // Update deductions: delete old and create new
+            if (deducciones) {
+                await tx.obraDeduccion.deleteMany({
+                    where: { obraId: id }
+                });
+                await tx.obraDeduccion.createMany({
+                    data: deducciones.map((d) => ({
+                        obraId: id,
+                        nombre: d.nombre,
+                        porcentaje: d.porcentaje || null,
+                        monto: d.monto || null,
+                        deduceAntesDeSala: d.deduceAntesDeSala ?? true
+                    }))
+                });
+            }
             return tx.obra.findUnique({
                 where: { id: id },
-                include: { artistaPayouts: true, artistas: true }
+                include: { artistaPayouts: true, deducciones: true, artistas: true }
             });
         });
         res.json(obra);

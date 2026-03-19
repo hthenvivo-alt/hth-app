@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma.js';
 import fs from 'fs';
 import crypto from 'crypto';
+import { sendPasswordResetEmail } from '../services/emailService.js';
 const LOG_FILE = '/tmp/hth_auth.log';
 function logToFile(message) {
     const timestamp = new Date().toISOString();
@@ -105,11 +106,8 @@ export const forgotPassword = async (req, res) => {
                 resetPasswordExpires: expires
             }
         });
-        // In production, send email here. For now, log it.
-        const resetLink = `http://localhost:5173/reset-password?token=${token}`;
-        console.log(`[PASSWORD RESET] Link for ${email}: ${resetLink}`);
-        logToFile(`[PASSWORD RESET] Link for ${email}: ${resetLink}`);
-        res.json({ message: 'Instrucciones enviadas al correo.' });
+        // Send password reset email
+        await sendPasswordResetEmail(email, user.nombre, token);
     }
     catch (error) {
         console.error(error);

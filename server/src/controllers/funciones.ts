@@ -14,7 +14,7 @@ export const getFunciones = async (req: AuthRequest, res: Response) => {
             where,
             include: {
                 obra: {
-                    include: { artistaPayouts: true }
+                    include: { artistaPayouts: true, deducciones: true }
                 },
                 productorAsociado: {
                     select: { nombre: true, apellido: true }

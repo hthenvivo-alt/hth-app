@@ -87,12 +87,8 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                 setMoneda(grupal.moneda || 'ARS');
                 setTipoCambio(grupal.tipoCambio || 1);
             } else {
-                // Default deductions if none exist
-                setItems([
-                    { tipo: 'Deduccion', concepto: 'Argentores', porcentaje: '', monto: '', deduceAntesDeSala: true },
-                    { tipo: 'Deduccion', concepto: 'Sadaic', porcentaje: '', monto: '', deduceAntesDeSala: true },
-                    { tipo: 'Deduccion', concepto: 'AADET', porcentaje: 0.2, monto: '', deduceAntesDeSala: true }
-                ]);
+                // No default items — start empty
+                setItems([]);
             }
         }
     }, [grupal]);
@@ -474,13 +470,16 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                         <table className="w-full text-left">
                             <thead className="bg-white/5 text-[11px] font-black uppercase tracking-widest text-gray-400 border-b border-white/5">
                                 <tr>
-                                    <th className="px-8 py-5">Fecha / Obra</th>
-                                    <th className="px-8 py-5">Lugar</th>
-                                    <th className="px-8 py-5 text-right">Entradas</th>
-                                    <th className="px-8 py-5 text-right">Venta Total</th>
-                                    <th className="px-8 py-5 text-right">Desc. Tarjeta</th>
-                                    <th className="px-8 py-5 text-right">Recau. Bruta</th>
-                                    <th className="px-8 py-5 text-right">Compañía</th>
+                                    <th className="px-6 py-5">Fecha / Obra</th>
+                                    <th className="px-6 py-5">Lugar</th>
+                                    <th className="px-6 py-5 text-right">Entradas</th>
+                                    <th className="px-6 py-5 text-right">Venta Total</th>
+                                    <th className="px-6 py-5 text-right">Desc. Tarjeta</th>
+                                    <th className="px-6 py-5 text-right">Rec. Bruta</th>
+                                    <th className="px-6 py-5 text-right">Deducciones</th>
+                                    <th className="px-6 py-5 text-right">Rec. Neta</th>
+                                    <th className="px-6 py-5 text-right">Costo Sala</th>
+                                    <th className="px-6 py-5 text-right">Ingr. Compañía</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
@@ -488,50 +487,143 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                                     .sort((a, b) => new Date(a.funcion.fecha).getTime() - new Date(b.funcion.fecha).getTime())
                                     .map((l: any) => {
                                         const derivedRecaudacionBruta = (Number(l.facturacionTotal) || 0) - (Number(l.costosVenta) || 0);
+                                        const recNeta = Number(l.recaudacionNeta) || 0;
+                                        const costoSala = derivedRecaudacionBruta - recNeta;
+                                        const deducciones = (l.items || []).filter((i: any) => i.tipo === 'Deduccion').reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
                                         return (
-                                            <tr key={l.id} className="group hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => navigate(`/liquidacion/${l.funcion.id}`)}>
-                                                <td className="px-8 py-6">
-                                                    <div className="font-bold text-white group-hover:text-primary-400 transition-colors uppercase text-base tracking-tight">{l.funcion.obra.nombre}</div>
-                                                    <div className="text-xs text-gray-600 font-bold uppercase mt-1.5">{formatDate(l.funcion.fecha)}</div>
+                                            <tr key={l.id} className="group hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => navigate(`/liquidacion/${l.funcion.id}?from=grupal&grupalId=${id}`)}>
+                                                <td className="px-6 py-5">
+                                                    <div className="font-bold text-white group-hover:text-primary-400 transition-colors uppercase text-sm tracking-tight">{l.funcion.obra.nombre}</div>
+                                                    <div className="text-xs text-gray-600 font-bold uppercase mt-1">{formatDate(l.funcion.fecha)}</div>
                                                 </td>
-                                                <td className="px-8 py-6">
+                                                <td className="px-6 py-5">
                                                     <div className="text-sm text-gray-400 font-bold uppercase">{l.funcion.ciudad}</div>
                                                     <div className="text-xs text-gray-600 font-bold uppercase mt-1">{l.funcion.salaNombre}</div>
                                                 </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    <div className="text-base font-black text-white">{l.funcion.vendidas || 0}</div>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-black text-white">{l.funcion.vendidas || 0}</div>
                                                 </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    <div className="text-base font-black text-white">{S} {Number(l.facturacionTotal).toLocaleString('es-AR')}</div>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-black text-white">{S} {Number(l.facturacionTotal).toLocaleString('es-AR')}</div>
                                                 </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    <div className="text-base font-black text-red-500">{S} {Number(l.costosVenta).toLocaleString('es-AR')}</div>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-black text-red-500">{S} {Number(l.costosVenta).toLocaleString('es-AR')}</div>
                                                 </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    <div className="text-base font-black text-white">{S} {derivedRecaudacionBruta.toLocaleString('es-AR')}</div>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-black text-white">{S} {derivedRecaudacionBruta.toLocaleString('es-AR')}</div>
                                                 </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    <div className="text-base font-black text-green-500">{S} {Number(l.resultadoCompania).toLocaleString('es-AR')}</div>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-black text-red-400">- {S} {deducciones.toLocaleString('es-AR')}</div>
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-black text-white">{S} {recNeta.toLocaleString('es-AR')}</div>
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-black text-orange-400">{S} {costoSala.toLocaleString('es-AR')}</div>
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <div className="text-sm font-black text-green-500">{S} {Number(l.resultadoCompania).toLocaleString('es-AR')}</div>
                                                 </td>
                                             </tr>
                                         );
                                     })}
                             </tbody>
                             <tfoot className="bg-white/5 border-t border-white/10">
-                                <tr className="font-black text-white text-sm uppercase tracking-widest">
-                                    <td className="px-8 py-6" colSpan={2}>Totales Consolidados</td>
-                                    <td className="px-8 py-6 text-right">{totalEntradasVendidas.toLocaleString('es-AR')}</td>
-                                    <td className="px-8 py-6 text-right">{S} {totalFacturacion.toLocaleString('es-AR')}</td>
-                                    <td className="px-8 py-6 text-right text-red-500">{S} {totalCostosVenta.toLocaleString('es-AR')}</td>
-                                    <td className="px-8 py-6 text-right">{S} {totalRecaudacionBrutaReal.toLocaleString('es-AR')}</td>
-                                    <td className="px-8 py-6 text-right text-green-500">{S} {totalResultadoCompaniaReal.toLocaleString('es-AR')}</td>
+                                <tr className="font-black text-white text-xs uppercase tracking-widest">
+                                    <td className="px-6 py-5" colSpan={2}>Totales Consolidados</td>
+                                    <td className="px-6 py-5 text-right">{totalEntradasVendidas.toLocaleString('es-AR')}</td>
+                                    <td className="px-6 py-5 text-right">{S} {totalFacturacion.toLocaleString('es-AR')}</td>
+                                    <td className="px-6 py-5 text-right text-red-500">{S} {totalCostosVenta.toLocaleString('es-AR')}</td>
+                                    <td className="px-6 py-5 text-right">{S} {totalRecaudacionBrutaReal.toLocaleString('es-AR')}</td>
+                                    <td className="px-6 py-5 text-right text-red-400">- {S} {totalDeduccionesConsolidadas.toLocaleString('es-AR')}</td>
+                                    <td className="px-6 py-5 text-right">{S} {totalRecaudacionNetaReal.toLocaleString('es-AR')}</td>
+                                    <td className="px-6 py-5 text-right text-orange-400">{S} {totalMontoSalaReal.toLocaleString('es-AR')}</td>
+                                    <td className="px-6 py-5 text-right text-green-500">{S} {totalResultadoCompaniaReal.toLocaleString('es-AR')}</td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 </section>
 
-                {/* 3. Settlement Box (Moved from Sidebar, Expanded Layout) */}
+                {/* 3. Gastos Generales del Período - directly below table */}
+                <section className="space-y-8">
+                    <div className="bg-[#121212] border border-white/5 rounded-3xl overflow-hidden p-8">
+                        <div className="flex justify-between items-center mb-8">
+                            <div className="flex items-center gap-3">
+                                <Plus size={20} className="text-gray-500" />
+                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Gastos Generales del Período</h3>
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setItems([...items, { tipo: 'Deduccion', concepto: '', monto: '', isGroupLevel: true, deduceAntesDeSala: true }])}
+                                    className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-400 transition-all border border-red-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+                                >
+                                    <Plus size={16} />
+                                    Agregar Deducción
+                                </button>
+                                <button
+                                    onClick={() => setItems([...items, { tipo: 'Gasto', concepto: '', monto: '', isGroupLevel: true }])}
+                                    className="px-5 py-2.5 bg-primary-500/10 hover:bg-primary-500/20 rounded-xl text-primary-400 transition-all border border-primary-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+                                >
+                                    <Plus size={16} />
+                                    Agregar Gasto
+                                </button>
+                            </div>
+                        </div>
+                        {items.length === 0 ? (
+                            <p className="text-xs text-gray-600 italic">Sin gastos generales del período.</p>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {items.map((item, idx) => (
+                                    <div key={`item-${idx}`} className={`flex gap-4 items-center p-5 rounded-2xl group border transition-all ${
+                                        item.tipo === 'Deduccion' ? 'bg-red-500/5 border-red-500/10 hover:border-red-500/20' : 'bg-white/5 border-white/5 hover:border-white/10'
+                                    }`}>
+                                        <div className="flex-1 flex flex-col gap-1">
+                                            <input
+                                                type="text"
+                                                value={item.concepto}
+                                                onChange={(e) => updateItem(idx, 'concepto', e.target.value)}
+                                                placeholder="Descripción"
+                                                className="bg-transparent border-none text-xs font-black text-white p-0 uppercase focus:ring-0 placeholder:text-gray-700"
+                                            />
+                                            <span className={`text-[10px] font-bold uppercase tracking-widest ${item.tipo === 'Deduccion' ? 'text-red-500/50' : 'text-gray-600'}`}>
+                                                {item.tipo === 'Deduccion' ? 'Deducción' : 'Gasto'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+                                            <span className="text-xs text-gray-600 font-bold">{S}</span>
+                                            <input
+                                                type="text"
+                                                value={item.monto}
+                                                onChange={(e) => updateItem(idx, 'monto', e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const result = evaluateArithmetic(String(item.monto));
+                                                        if (result !== null) updateItem(idx, 'monto', result);
+                                                    }
+                                                }}
+                                                onBlur={() => {
+                                                    const result = evaluateArithmetic(String(item.monto));
+                                                    if (result !== null) updateItem(idx, 'monto', result);
+                                                }}
+                                                className="w-24 bg-transparent border-none text-right text-sm font-black text-white p-0 focus:ring-0"
+                                                placeholder="0,00"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                                            className="p-2 text-gray-500 hover:text-red-500 transition-colors ml-2"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* 4. Settlement Box */}
                 <section className="bg-white/[0.02] border border-white/10 rounded-[2.5rem] overflow-hidden backdrop-blur-xl shadow-2xl">
                     <div className="bg-white/5 px-10 py-6 border-b border-white/5 flex justify-between items-center">
                         <div className="flex items-center gap-3">
@@ -543,7 +635,7 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                     <div className="p-10">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                             {/* Calculation Details */}
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 <div className="flex justify-between items-center bg-white/5 px-6 py-5 rounded-2xl border border-white/5">
                                     <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Recaudación Bruta (Suma)</span>
                                     <span className="text-xl font-black text-white">{S} {totalRecaudacionBrutaReal.toLocaleString('es-AR')}</span>
@@ -572,16 +664,28 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                                 </div>
 
                                 <div className="flex justify-between items-center px-6">
-                                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest">(-) Gastos y Impuestos (Funciones)</span>
+                                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest">(-) Artística (Artistas)</span>
+                                    <span className="text-xl font-black text-red-500">- {S} {Math.round(totalRepartosMonto).toLocaleString('es-AR')}</span>
+                                </div>
+
+                                <div className="flex justify-between items-center px-6">
+                                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest">(-) Gastos e Impuestos (Funciones)</span>
                                     <span className="text-xl font-black text-red-500">- {S} {totalGastosShowConsolidados.toLocaleString('es-AR')}</span>
                                 </div>
 
-                                {(totalGastosGrupo > 0 || totalDeduccionesGrupo > 0) && (
+                                {(totalGastosGrupo + totalDeduccionesGrupo) > 0 && (
                                     <div className="flex justify-between items-center px-6">
-                                        <span className="text-xs font-black text-primary-500 uppercase tracking-widest">(-) Gastos del Período (Ajustes)</span>
+                                        <span className="text-xs font-black text-gray-500 uppercase tracking-widest">(-) Gastos Generales del Período</span>
                                         <span className="text-xl font-black text-red-500">- {S} {(totalGastosGrupo + totalDeduccionesGrupo).toLocaleString('es-AR')}</span>
                                     </div>
                                 )}
+
+                                <div className="h-px bg-white/5 mx-6" />
+
+                                <div className="flex justify-between items-center bg-primary-500/10 px-6 py-5 rounded-2xl border border-primary-500/20">
+                                    <span className="text-xs font-black text-primary-400 uppercase tracking-widest">Resultado Grupo de Funciones</span>
+                                    <span className="text-xl font-black text-primary-400">{S} {Math.round(finalBalanceReal).toLocaleString('es-AR')}</span>
+                                </div>
                             </div>
 
                             {/* Artist Breakdown & Final Result */}
@@ -603,161 +707,7 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                                         ))}
                                     </div>
                                 )}
-
-                                <div className="bg-primary-500/10 border-2 border-primary-500/30 p-10 rounded-[2rem] text-center space-y-4 shadow-2xl relative">
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary-500 text-black px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
-                                        Saldo Final
-                                    </div>
-                                    <div className="text-sm font-black text-primary-500 uppercase tracking-[0.3em] mb-2">Resultado Neto HTH</div>
-                                    <div className="text-7xl font-black text-white tracking-tighter">
-                                        {S} {finalBalanceReal.toLocaleString('es-AR')}
-                                    </div>
-                                    <div className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] pt-4">
-                                        Utilidad Neta del Grupo de Funciones
-                                    </div>
-                                </div>
                             </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* 4. Group Deductions & Expenses Editor */}
-                <section className="space-y-8">
-                    <div className="bg-[#121212] border border-white/5 rounded-3xl overflow-hidden p-8">
-                        <div className="flex justify-between items-center mb-8">
-                            <div className="flex items-center gap-3">
-                                <Plus size={20} className="text-gray-500" />
-                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Deducciones del Período (Ajustes)</h3>
-                            </div>
-                            <button
-                                onClick={() => setItems([...items, { tipo: 'Deduccion', concepto: '', monto: '', isGroupLevel: true, deduceAntesDeSala: true }])}
-                                className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-400 transition-all border border-red-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
-                            >
-                                <Plus size={16} />
-                                Agregar Deducción
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {items.filter(i => i.tipo === 'Deduccion').map((item, idx) => {
-                                const actualIdx = items.indexOf(item);
-                                return (
-                                    <div key={`ded-${idx}`} className="flex gap-4 items-center bg-white/5 p-5 rounded-2xl group border border-white/5 hover:border-white/10 transition-all">
-                                        <div className="flex-1 flex flex-col gap-1">
-                                            <input
-                                                type="text"
-                                                value={item.concepto}
-                                                onChange={(e) => updateItem(actualIdx, 'concepto', e.target.value)}
-                                                placeholder="Descripción"
-                                                className="bg-transparent border-none text-xs font-black text-white p-0 uppercase focus:ring-0 placeholder:text-gray-700"
-                                            />
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={item.porcentaje}
-                                                    onChange={(e) => updateItem(actualIdx, 'porcentaje', e.target.value)}
-                                                    placeholder="0"
-                                                    className="w-12 bg-transparent border-none text-[10px] font-bold text-gray-500 p-0 focus:ring-0 italic"
-                                                />
-                                                <span className="text-[10px] text-gray-700 font-black">%</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 border-l border-white/10 pl-4">
-                                            <span className="text-xs text-gray-600 font-bold">$</span>
-                                            <input
-                                                type="text"
-                                                value={item.monto}
-                                                onChange={(e) => updateItem(actualIdx, 'monto', e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        const result = evaluateArithmetic(String(item.monto));
-                                                        if (result !== null) updateItem(actualIdx, 'monto', result);
-                                                    }
-                                                }}
-                                                onBlur={() => {
-                                                    const result = evaluateArithmetic(String(item.monto));
-                                                    if (result !== null) updateItem(actualIdx, 'monto', result);
-                                                }}
-                                                className="w-24 bg-transparent border-none text-right text-sm font-black text-white p-0 focus:ring-0"
-                                                placeholder="0,00"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center gap-1 min-w-[50px] border-l border-white/10 pl-2 ml-2">
-                                            <label className="text-[8px] font-black uppercase text-gray-500 tracking-wider">Afecta Sala</label>
-                                            <input
-                                                type="checkbox"
-                                                checked={item.deduceAntesDeSala !== false}
-                                                onChange={(e) => updateItem(actualIdx, 'deduceAntesDeSala', e.target.checked)}
-                                                className="w-3.5 h-3.5 rounded border-gray-600 text-primary-500 bg-black/20 focus:ring-primary-500/50 cursor-pointer"
-                                                title="¿Se descuenta de la base imponible sobre la que cobra la sala?"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={() => setItems(items.filter((_, i) => i !== actualIdx))}
-                                            className="p-2 text-gray-500 hover:text-red-500 transition-colors ml-2"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="bg-[#121212] border border-white/5 rounded-3xl overflow-hidden p-8">
-                        <div className="flex justify-between items-center mb-8">
-                            <div className="flex items-center gap-3">
-                                <Plus size={20} className="text-gray-500" />
-                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Gastos del Período (Ajustes)</h3>
-                            </div>
-                            <button
-                                onClick={() => setItems([...items, { tipo: 'Gasto', concepto: '', monto: '', isGroupLevel: true }])}
-                                className="px-5 py-2.5 bg-primary-500/10 hover:bg-primary-500/20 rounded-xl text-primary-400 transition-all border border-primary-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
-                            >
-                                <Plus size={16} />
-                                Agregar Item
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {items.filter(i => i.tipo === 'Gasto').map((item, idx) => {
-                                const actualIdx = items.indexOf(item);
-                                return (
-                                    <div key={`gst-${idx}`} className="flex gap-4 items-center bg-white/5 p-5 rounded-2xl group border border-white/5 hover:border-white/10 transition-all">
-                                        <input
-                                            type="text"
-                                            value={item.concepto}
-                                            onChange={(e) => updateItem(actualIdx, 'concepto', e.target.value)}
-                                            placeholder="Descripción"
-                                            className="flex-1 bg-transparent border-none text-xs font-black text-white p-0 uppercase focus:ring-0 placeholder:text-gray-700"
-                                        />
-                                        <div className="flex items-center gap-2 border-l border-white/10 pl-4">
-                                            <span className="text-xs text-gray-600 font-bold">$</span>
-                                            <input
-                                                type="text"
-                                                value={item.monto}
-                                                onChange={(e) => updateItem(actualIdx, 'monto', e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        const result = evaluateArithmetic(String(item.monto));
-                                                        if (result !== null) updateItem(actualIdx, 'monto', result);
-                                                    }
-                                                }}
-                                                onBlur={() => {
-                                                    const result = evaluateArithmetic(String(item.monto));
-                                                    if (result !== null) updateItem(actualIdx, 'monto', result);
-                                                }}
-                                                className="w-24 bg-transparent border-none text-right text-sm font-black text-white p-0 focus:ring-0"
-                                                placeholder="0,00"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={() => setItems(items.filter((_, i) => i !== actualIdx))}
-                                            className="p-2 text-gray-500 hover:text-red-500 transition-colors"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                );
-                            })}
                         </div>
                     </div>
                 </section>

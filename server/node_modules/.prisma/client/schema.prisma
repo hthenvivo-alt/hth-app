@@ -44,12 +44,25 @@ model Obra {
   updated_at           DateTime         @updatedAt
   driveFolderId        String?
   artistaPayouts       ArtistaPayout[]
+  deducciones          ObraDeduccion[]
   checklists           ChecklistTarea[]
   documentos           Documento[]
   funciones            Funcion[]
   gastos               Gasto[]
   productorEjecutivo   User             @relation("ProductorEjecutivo", fields: [productorEjecutivoId], references: [id], onDelete: Cascade)
   artistas             User[]           @relation("ArtistasEnObras")
+}
+
+model ObraDeduccion {
+  id                String   @id @default(uuid())
+  obraId            String
+  nombre            String
+  porcentaje        Decimal? @db.Decimal(5, 2)
+  monto             Decimal? @db.Decimal(15, 2)
+  deduceAntesDeSala Boolean  @default(true)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  obra              Obra     @relation(fields: [obraId], references: [id], onDelete: Cascade)
 }
 
 model ArtistaPayout {

@@ -1,4 +1,7 @@
 import prisma from '../lib/prisma.js';
+import fs from 'fs';
+import path from 'path';
+import archiver from 'archiver';
 export const getLiquidacionByFuncion = async (req, res) => {
     const funcionId = req.params.funcionId;
     try {
@@ -81,6 +84,45 @@ export const getLastExpensesByObra = async (req, res) => {
         res.status(500).json({ error: 'Error fetching last expenses' });
     }
 };
+export const getLiquidacionSuggestions = async (req, res) => {
+    const funcionId = req.params.funcionId;
+    try {
+        const currentFuncion = await prisma.funcion.findUnique({
+            where: { id: funcionId },
+            select: { obraId: true, salaNombre: true, fecha: true }
+        });
+        if (!currentFuncion) {
+            return res.status(404).json({ error: 'Función no encontrada' });
+        }
+        const lastLiquidacion = await prisma.liquidacion.findFirst({
+            where: {
+                funcion: {
+                    obraId: currentFuncion.obraId,
+                    salaNombre: currentFuncion.salaNombre,
+                    fecha: {
+                        lt: currentFuncion.fecha
+                    }
+                }
+            },
+            orderBy: {
+                funcion: {
+                    fecha: 'desc'
+                }
+            },
+            include: {
+                items: true
+            }
+        });
+        if (!lastLiquidacion) {
+            return res.json([]);
+        }
+        res.json(lastLiquidacion.items);
+    }
+    catch (error) {
+        console.error('Error fetching liquidacion suggestions:', error);
+        res.status(500).json({ error: 'Error fetching suggestions' });
+    }
+};
 export const upsertLiquidacion = async (req, res) => {
     const funcionId = req.params.funcionId;
     const data = req.body;
@@ -88,14 +130,20 @@ export const upsertLiquidacion = async (req, res) => {
     const num = (val) => {
         if (val === undefined || val === null || val === '')
             return 0;
-        const n = Number(val);
-        return isNaN(n) ? 0 : n;
+        if (typeof val === 'number')
+            return Math.round(val * 100) / 100;
+        const clean = String(val).replace(/\./g, '').replace(',', '.');
+        const n = Number(clean);
+        return isNaN(n) ? 0 : Math.round(n * 100) / 100;
     };
     const nOrNull = (val) => {
         if (val === undefined || val === null || val === '')
             return null;
-        const n = Number(val);
-        return isNaN(n) ? null : n;
+        if (typeof val === 'number')
+            return Math.round(val * 100) / 100;
+        const clean = String(val).replace(/\./g, '').replace(',', '.');
+        const n = Number(clean);
+        return isNaN(n) ? null : Math.round(n * 100) / 100;
     };
     try {
         // Use a transaction to ensure either everything is saved or nothing
@@ -135,7 +183,8 @@ export const upsertLiquidacion = async (req, res) => {
                             tipo: item.tipo,
                             concepto: item.concepto,
                             porcentaje: nOrNull(item.porcentaje),
-                            monto: num(item.monto)
+                            monto: num(item.monto),
+                            deduceAntesDeSala: item.deduceAntesDeSala ?? true
                         }))
                     },
                     repartos: {
@@ -175,7 +224,8 @@ export const upsertLiquidacion = async (req, res) => {
                             tipo: item.tipo,
                             concepto: item.concepto,
                             porcentaje: nOrNull(item.porcentaje),
-                            monto: num(item.monto)
+                            monto: num(item.monto),
+                            deduceAntesDeSala: item.deduceAntesDeSala ?? true
                         }))
                     },
                     repartos: {
@@ -195,7 +245,7 @@ export const upsertLiquidacion = async (req, res) => {
             await tx.funcion.update({
                 where: { id: funcionId },
                 data: {
-                    vendidas: num(data.vendidas),
+                    vendidas: Math.round(num(data.vendidas)),
                     ultimaFacturacionBruta: num(data.facturacionTotal),
                     ultimaActualizacionVentas: new Date()
                 }
@@ -206,7 +256,7 @@ export const upsertLiquidacion = async (req, res) => {
     }
     catch (error) {
         console.error('Error in upsertLiquidacion:', error);
-        res.status(500).json({ error: 'Error saving liquidacion' });
+        res.status(500).json({ error: `Error al guardar: ${error.message || error}` });
     }
 };
 export const uploadComprobantesFiles = async (req, res) => {
@@ -264,6 +314,104 @@ export const getComprobantes = async (req, res) => {
     catch (error) {
         console.error('Error fetching comprobantes:', error);
         res.status(500).json({ error: 'Error al obtener los comprobantes' });
+    }
+};
+export const downloadComprobantesZip = async (req, res) => {
+    const funcionId = req.params.funcionId;
+    try {
+        const liquidacion = await prisma.liquidacion.findUnique({
+            where: { funcionId },
+            include: {
+                comprobantes: true
+            }
+        });
+        if (!liquidacion || !liquidacion.comprobantes || liquidacion.comprobantes.length === 0) {
+            return res.status(404).json({ error: 'No hay comprobantes para esta liquidación' });
+        }
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        const zipName = `Comprobantes_Liquidacion_${funcionId}.zip`;
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename=${zipName}`);
+        archive.pipe(res);
+        liquidacion.comprobantes.forEach((v) => {
+            if (v.linkDrive.startsWith('/uploads/comprobantes/')) {
+                const fileName = path.basename(v.linkDrive);
+                const filePath = path.join(process.cwd(), 'uploads', 'comprobantes', fileName);
+                if (fs.existsSync(filePath)) {
+                    archive.file(filePath, { name: v.nombreDocumento });
+                }
+            }
+        });
+        await archive.finalize();
+    }
+    catch (error) {
+        console.error('Error downloading vouchers ZIP:', error);
+        res.status(500).json({ error: 'Error al generar el archivo ZIP' });
+    }
+};
+export const deleteComprobante = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const documento = await prisma.documento.findUnique({
+            where: { id: id }
+        });
+        if (!documento) {
+            return res.status(404).json({ error: 'Comprobante no encontrado' });
+        }
+        await prisma.documento.delete({
+            where: { id: id }
+        });
+        if (documento.linkDrive.startsWith('/uploads/comprobantes/')) {
+            const filePath = path.join(process.cwd(), documento.linkDrive);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+        res.status(204).send();
+    }
+    catch (error) {
+        console.error('Error deleting comprobante:', error);
+        res.status(500).json({ error: 'Error al eliminar el comprobante' });
+    }
+};
+export const downloadGrupalComprobantesZip = async (req, res) => {
+    const { id: grupalId } = req.params;
+    try {
+        const liquidaciones = await prisma.liquidacion.findMany({
+            where: { grupalId: grupalId },
+            include: {
+                comprobantes: true,
+                funcion: true
+            }
+        });
+        if (!liquidaciones || liquidaciones.length === 0) {
+            return res.status(404).json({ error: 'No se encontraron liquidaciones para este grupo' });
+        }
+        const allComprobantes = liquidaciones.flatMap(l => l.comprobantes.map(c => ({ ...c, funcionFecha: l.funcion.fecha, obraNombre: 'Documento' })));
+        if (allComprobantes.length === 0) {
+            return res.status(404).json({ error: 'No hay comprobantes en ninguna de las liquidaciones del grupo' });
+        }
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        const zipName = `Comprobantes_Grupo_${grupalId}.zip`;
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename=${zipName}`);
+        archive.pipe(res);
+        allComprobantes.forEach((v, index) => {
+            if (v.linkDrive.startsWith('/uploads/comprobantes/')) {
+                const fileName = path.basename(v.linkDrive);
+                const filePath = path.join(process.cwd(), 'uploads', 'comprobantes', fileName);
+                if (fs.existsSync(filePath)) {
+                    // Predix with function index or date to avoid name collisions
+                    const prefix = v.funcionFecha ? `${new Date(v.funcionFecha).toISOString().split('T')[0]}_` : `${index}_`;
+                    archive.file(filePath, { name: prefix + v.nombreDocumento });
+                }
+            }
+        });
+        await archive.finalize();
+    }
+    catch (error) {
+        console.error('Error downloading group vouchers ZIP:', error);
+        res.status(500).json({ error: 'Error al generar el archivo ZIP del grupo' });
     }
 };
 export const createLiquidacionGrupal = async (req, res) => {
@@ -476,7 +624,8 @@ export const upsertLiquidacionGrupal = async (req, res) => {
                             tipo: item.tipo,
                             concepto: item.concepto,
                             porcentaje: nOrNull(item.porcentaje),
-                            monto: num(item.monto)
+                            monto: num(item.monto),
+                            deduceAntesDeSala: item.deduceAntesDeSala ?? true
                         }))
                     } : undefined
                 },

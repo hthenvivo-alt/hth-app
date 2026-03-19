@@ -47,6 +47,8 @@ const Obras: React.FC = () => {
         setIsModalOpen(false);
         setEditingObra(null);
         queryClient.invalidateQueries({ queryKey: ['obras'] });
+        queryClient.invalidateQueries({ queryKey: ['funciones'] });
+        queryClient.invalidateQueries({ queryKey: ['funcion'] });
     };
 
     const openCreateModal = () => {

@@ -88,7 +88,7 @@ export const exportToPDF = async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename=invitados-${funcion.obra.nombre}-${funcionId}.pdf`);
         doc.pipe(res);
         doc.fontSize(20).text(`Lista de Invitados - ${funcion.obra.nombre}`, { align: 'center' });
-        doc.fontSize(12).text(`Fecha: ${new Date(funcion.fecha).toLocaleDateString()}`, { align: 'center' });
+        doc.fontSize(12).text(`Fecha: ${new Date(funcion.fecha).toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`, { align: 'center' });
         doc.text(`Sala: ${funcion.salaNombre} - ${funcion.ciudad}`, { align: 'center' });
         doc.moveDown();
         doc.fontSize(14).text('Invitados:', { underline: true });
