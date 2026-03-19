@@ -21,6 +21,8 @@ interface BackupFile {
 const BackupManager: React.FC = () => {
     const queryClient = useQueryClient();
     const [restoring, setRestoring] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const { data: backups, isLoading } = useQuery({
         queryKey: ['backups'],
@@ -42,6 +44,36 @@ const BackupManager: React.FC = () => {
             alert('Error al crear el backup');
         }
     });
+
+    const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.name.endsWith('.json')) {
+            alert('Solo se permiten archivos JSON');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('backup', file);
+
+        setUploading(true);
+        try {
+            await api.post('/backup/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            alert('Backup subido correctamente');
+            queryClient.invalidateQueries({ queryKey: ['backups'] });
+        } catch (error) {
+            console.error('Error uploading backup:', error);
+            alert('Error al subir el backup');
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     const restoreBackupMutation = useMutation({
         mutationFn: async (filename: string) => {
@@ -100,14 +132,31 @@ const BackupManager: React.FC = () => {
                             Backups automáticos diarios y manuales.
                         </p>
                     </div>
-                    <button
-                        onClick={() => createBackupMutation.mutate()}
-                        disabled={createBackupMutation.isPending}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50"
-                    >
-                        {createBackupMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <HardDrive size={16} />}
-                        Crear Backup Ahora
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleUpload}
+                            accept=".json"
+                            className="hidden"
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-white/10 disabled:opacity-50"
+                        >
+                            {uploading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                            Subir Backup
+                        </button>
+                        <button
+                            onClick={() => createBackupMutation.mutate()}
+                            disabled={createBackupMutation.isPending}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                        >
+                            {createBackupMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <HardDrive size={16} />}
+                            Crear Backup Ahora
+                        </button>
+                    </div>
                 </div>
 
                 {isLoading ? (

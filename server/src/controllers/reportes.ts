@@ -22,6 +22,7 @@ export const getArtistReport = async (req: AuthRequest, res: Response) => {
             },
             include: {
                 funciones: {
+                    where: { confirmada: true },
                     orderBy: {
                         fecha: 'asc'
                     }
@@ -61,6 +62,7 @@ export const getObraSalesEvolution = async (req: AuthRequest, res: Response) => 
             },
             include: {
                 funciones: {
+                    where: { confirmada: true },
                     include: {
                         ventas: {
                             orderBy: {
@@ -121,6 +123,7 @@ export const getMatrixReportData = async (req: AuthRequest, res: Response) => {
             where: {}, // Admins can see everything
             include: {
                 funciones: {
+                    where: { confirmada: true },
                     include: {
                         ventas: {
                             orderBy: {
