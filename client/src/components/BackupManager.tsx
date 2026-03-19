@@ -84,11 +84,13 @@ const BackupManager: React.FC = () => {
             alert('Base de datos restaurada correctamente. La página se recargará.');
             window.location.reload();
         },
-        onError: () => {
-            alert('Error al restaurar el backup');
+        onError: (error: any) => {
+            const message = error.response?.data?.details || error.response?.data?.error || 'Error al restaurar el backup';
+            alert(`Error: ${message}`);
             setRestoring(null);
         }
     });
+
 
     const handleRestore = (filename: string) => {
         if (window.confirm('¿Estás seguro de que quieres restaurar este backup? SE PERDERÁN TODOS LOS DATOS ACTUALES y serán reemplazados por los de la copia.')) {

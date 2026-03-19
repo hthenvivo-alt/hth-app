@@ -13,24 +13,37 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
         const filename = `backup-${timestamp}.json`;
         const filepath = path.join(BACKUP_DIR, filename);
 
-        // Fetch all data
-        // We order operations to respect Foreign Key constraints during restore if we were to insert sequentially,
-        // but for backup we just need to grab everything.
-        const users = await prisma.user.findMany();
-        const obras = await prisma.obra.findMany();
-        const funciones = await prisma.funcion.findMany();
-        const logisticaRutas = await prisma.logisticaRuta.findMany();
-        const checklists = await prisma.checklistTarea.findMany();
-        const documentos = await prisma.documento.findMany();
-        const liquidaciones = await prisma.liquidacion.findMany({ include: { items: true } });
-        const ventas = await prisma.venta.findMany();
-        const gastos = await prisma.gasto.findMany();
-        const mensajes = await prisma.mensaje.findMany();
+        // Fetch all data from all 17 tables
+        const [
+            users, obras, funciones, logisticaRutas, checklists, 
+            documentos, liquidaciones, ventas, gastos, mensajes,
+            obraDeducciones, artistaPayouts, invitados, 
+            liquidacionGrupales, liquidacionGrupalItems,
+            liquidacionItems, liquidacionRepartos
+        ] = await Promise.all([
+            prisma.user.findMany(),
+            prisma.obra.findMany(),
+            prisma.funcion.findMany(),
+            prisma.logisticaRuta.findMany(),
+            prisma.checklistTarea.findMany(),
+            prisma.documento.findMany(),
+            prisma.liquidacion.findMany(),
+            prisma.venta.findMany(),
+            prisma.gasto.findMany(),
+            prisma.mensaje.findMany(),
+            prisma.obraDeduccion.findMany(),
+            prisma.artistaPayout.findMany(),
+            prisma.invitado.findMany(),
+            prisma.liquidacionGrupal.findMany(),
+            prisma.liquidacionGrupalItem.findMany(),
+            prisma.liquidacionItem.findMany(),
+            prisma.liquidacionReparto.findMany()
+        ]);
 
         const backupData = {
             meta: {
                 timestamp: new Date(),
-                version: '1.0'
+                version: '1.1'
             },
             data: {
                 users,
@@ -42,7 +55,14 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
                 liquidaciones,
                 ventas,
                 gastos,
-                mensajes
+                mensajes,
+                obraDeducciones,
+                artistaPayouts,
+                invitados,
+                liquidacionGrupals: liquidacionGrupales,
+                liquidacionGrupalItems,
+                liquidacionItems,
+                liquidacionRepartos
             }
         };
 
@@ -100,77 +120,58 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
 
         // Transactional Restore
         await prisma.$transaction(async (tx) => {
-            // 1. CLEAR DATABASE (Order matters due to Foreign Keys)
-            // Delete child tables first
+            // 1. CLEAR DATABASE (Correct order to avoid FK violations)
+            // Leaf tables first
+            await tx.liquidacionReparto.deleteMany();
             await tx.liquidacionItem.deleteMany();
+            await tx.liquidacionGrupalItem.deleteMany();
             await tx.liquidacion.deleteMany();
-            await tx.checklistTarea.deleteMany();
+            await tx.liquidacionGrupal.deleteMany();
+            await tx.invitado.deleteMany();
             await tx.venta.deleteMany();
             await tx.gasto.deleteMany();
             await tx.mensaje.deleteMany();
+            await tx.checklistTarea.deleteMany();
             await tx.logisticaRuta.deleteMany();
-            await tx.documento.deleteMany(); // Documento can depend on nothing or other things, but usually leaf-ish
+            await tx.documento.deleteMany();
+            await tx.artistaPayout.deleteMany();
+            await tx.obraDeduccion.deleteMany();
             await tx.funcion.deleteMany();
             await tx.obra.deleteMany();
             await tx.user.deleteMany();
 
-            // 2. INSERT DATA (Order matters: Parents first)
-            // Users
+            // 2. INSERT DATA (Correct order: Parents first)
             if (data.users?.length) await tx.user.createMany({ data: data.users });
-
-            // Obras
             if (data.obras?.length) await tx.obra.createMany({ data: data.obras });
-
-            // Funciones
             if (data.funciones?.length) await tx.funcion.createMany({ data: data.funciones });
-
-            // Liquidaciones (Complicated/Deep structure usually handled by createMany, but createMany doesn't support nested relations in one go easily if IDs are preserved)
-            // Since we backed up raw table data (including IDs), createMany is fine for the main table.
-            if (data.liquidaciones?.length) {
-                // Separate Items from Liquidacion header
-                const liquidacionesHeaders = data.liquidaciones.map((l: any) => {
-                    const { items, ...header } = l;
-                    return header;
-                });
-
-                await tx.liquidacion.createMany({ data: liquidacionesHeaders });
-
-                // Items
-                const allItems: any[] = [];
-                data.liquidaciones.forEach((l: any) => {
-                    if (l.items && l.items.length) {
-                        allItems.push(...l.items);
-                    }
-                });
-
-                if (allItems.length) await tx.liquidacionItem.createMany({ data: allItems });
-            }
-
-            // Logistica
+            if (data.obraDeducciones?.length) await tx.obraDeduccion.createMany({ data: data.obraDeducciones });
+            if (data.artistaPayouts?.length) await tx.artistaPayout.createMany({ data: data.artistaPayouts });
             if (data.logisticaRutas?.length) await tx.logisticaRuta.createMany({ data: data.logisticaRutas });
-
-            // Checklists
             if (data.checklists?.length) await tx.checklistTarea.createMany({ data: data.checklists });
-
-            // Documentos
             if (data.documentos?.length) await tx.documento.createMany({ data: data.documentos });
-
-            // Mensajes
             if (data.mensajes?.length) await tx.mensaje.createMany({ data: data.mensajes });
-
-            // Gastos
             if (data.gastos?.length) await tx.gasto.createMany({ data: data.gastos });
-
-            // Ventas
             if (data.ventas?.length) await tx.venta.createMany({ data: data.ventas });
+            if (data.invitados?.length) await tx.invitado.createMany({ data: data.invitados });
+            if (data.liquidacionGrupals?.length) await tx.liquidacionGrupal.createMany({ data: data.liquidacionGrupals });
+            if (data.liquidaciones?.length) await tx.liquidacion.createMany({ data: data.liquidaciones }); // Liquidaciones refer to Funcion
+            if (data.liquidacionGrupalItems?.length) await tx.liquidacionGrupalItem.createMany({ data: data.liquidacionGrupalItems });
+            if (data.liquidacionItems?.length) await tx.liquidacionItem.createMany({ data: data.liquidacionItems });
+            if (data.liquidacionRepartos?.length) await tx.liquidacionReparto.createMany({ data: data.liquidacionRepartos });
+        }, {
+            timeout: 30000 // Increase timeout to 30s for large restores
         });
 
         res.json({ message: 'Backup restored successfully' });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error restoring backup:', error);
-        res.status(500).json({ error: 'Error restoring backup' });
+        res.status(500).json({ 
+            error: 'Error al restaurar el backup', 
+            details: error.message || 'Error desconocido' 
+        });
     }
 };
+
 
 export const downloadBackup = async (req: AuthRequest, res: Response) => {
     const { filename } = req.params;
