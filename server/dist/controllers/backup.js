@@ -125,37 +125,58 @@ export const restoreBackup = async (req, res) => {
                 return false;
             }
         };
-        // 0. PATCH SCHEMA
-        try {
-            await prisma.$executeRawUnsafe(`
-                CREATE TABLE IF NOT EXISTS "ObraDeduccion" (
-                    "id" TEXT NOT NULL, "obraId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
-                    "porcentaje" DECIMAL(5,2), "monto" DECIMAL(15,2),
-                    "deduceAntesDeSala" BOOLEAN NOT NULL DEFAULT true,
-                    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT "ObraDeduccion_pkey" PRIMARY KEY ("id")
-                );
-                CREATE TABLE IF NOT EXISTS "ArtistaPayout" (
-                    "id" TEXT NOT NULL, "obraId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
-                    "porcentaje" DECIMAL(5,2) NOT NULL, "base" TEXT NOT NULL,
-                    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT "ArtistaPayout_pkey" PRIMARY KEY ("id")
-                );
-                CREATE TABLE IF NOT EXISTS "Invitado" (
-                    "id" TEXT NOT NULL, "funcionId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
-                    "cantidad" INTEGER NOT NULL,
-                    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT "Invitado_pkey" PRIMARY KEY ("id")
-                );
-            `);
-            log.push('✓ Schema patched');
+        // 0. PATCH SCHEMA — Create missing tables one at a time
+        const schemaStatements = [
+            `CREATE TABLE IF NOT EXISTS "ObraDeduccion" (
+                "id" TEXT NOT NULL, "obraId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+                "porcentaje" DECIMAL(5,2), "monto" DECIMAL(15,2),
+                "deduceAntesDeSala" BOOLEAN NOT NULL DEFAULT true,
+                "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "ObraDeduccion_pkey" PRIMARY KEY ("id")
+            )`,
+            `DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ObraDeduccion_obraId_fkey') THEN
+                    ALTER TABLE "ObraDeduccion" ADD CONSTRAINT "ObraDeduccion_obraId_fkey"
+                    FOREIGN KEY ("obraId") REFERENCES "Obra"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+                END IF;
+            END $$`,
+            `CREATE TABLE IF NOT EXISTS "ArtistaPayout" (
+                "id" TEXT NOT NULL, "obraId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+                "porcentaje" DECIMAL(5,2) NOT NULL, "base" TEXT NOT NULL,
+                "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "ArtistaPayout_pkey" PRIMARY KEY ("id")
+            )`,
+            `DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ArtistaPayout_obraId_fkey') THEN
+                    ALTER TABLE "ArtistaPayout" ADD CONSTRAINT "ArtistaPayout_obraId_fkey"
+                    FOREIGN KEY ("obraId") REFERENCES "Obra"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+                END IF;
+            END $$`,
+            `CREATE TABLE IF NOT EXISTS "Invitado" (
+                "id" TEXT NOT NULL, "funcionId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+                "cantidad" INTEGER NOT NULL,
+                "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "Invitado_pkey" PRIMARY KEY ("id")
+            )`,
+            `DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'Invitado_funcionId_fkey') THEN
+                    ALTER TABLE "Invitado" ADD CONSTRAINT "Invitado_funcionId_fkey"
+                    FOREIGN KEY ("funcionId") REFERENCES "Funcion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+                END IF;
+            END $$`
+        ];
+        for (const stmt of schemaStatements) {
+            try {
+                await prisma.$executeRawUnsafe(stmt);
+            }
+            catch (e) {
+                log.push(`⚠ Schema stmt: ${e.message?.substring(0, 80)}`);
+            }
         }
-        catch (e) {
-            log.push(`⚠ Schema patch: ${e.message?.substring(0, 100)}`);
-        }
+        log.push('✓ Schema patch complete');
         // 1. CLEAR all tables
         await safeDelete('_ArtistasEnObras');
         await safeDelete('LiquidacionReparto');
