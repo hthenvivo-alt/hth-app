@@ -94,95 +94,70 @@ export const restoreBackup = async (req, res) => {
     if (!fs.existsSync(filepath)) {
         return res.status(404).json({ error: 'Backup file not found' });
     }
+    const log = [];
+    const errors = [];
     try {
         const fileContent = fs.readFileSync(filepath, 'utf-8');
         const backup = JSON.parse(fileContent);
         const { data } = backup;
-        // Helper: safely delete a table using raw SQL (handles missing tables gracefully)
+        log.push(`Backup parsed: ${Object.keys(data).map(k => `${k}:${Array.isArray(data[k]) ? data[k].length : 0}`).join(', ')}`);
+        // Helper: safely delete
         const safeDelete = async (tableName) => {
             try {
                 await prisma.$executeRawUnsafe(`DELETE FROM "${tableName}"`);
+                log.push(`✓ Deleted ${tableName}`);
             }
             catch (e) {
-                console.warn(`Skipping delete for ${tableName}: ${e.message}`);
+                log.push(`⚠ Skip delete ${tableName}: ${e.message?.substring(0, 100)}`);
             }
         };
-        // Helper: safely insert rows using Prisma (skip if table model doesn't exist on the client)
-        const safeCreate = async (fn) => {
+        // Helper: insert with error tracking
+        const safeCreate = async (name, fn, count) => {
             try {
-                await fn();
+                const result = await fn();
+                log.push(`✓ Inserted ${name}: ${count} records`);
+                return true;
             }
             catch (e) {
-                console.warn(`Skipping insert: ${e.message}`);
+                const msg = `✗ FAILED ${name} (${count} records): ${e.message?.substring(0, 200)}`;
+                log.push(msg);
+                errors.push(msg);
+                return false;
             }
         };
-        // 0. PATCH SCHEMA — Create any missing tables so restore doesn't fail
-        const schemaPatch = `
-            CREATE TABLE IF NOT EXISTS "ObraDeduccion" (
-                "id" TEXT NOT NULL,
-                "obraId" TEXT NOT NULL,
-                "nombre" TEXT NOT NULL,
-                "porcentaje" DECIMAL(5,2),
-                "monto" DECIMAL(15,2),
-                "deduceAntesDeSala" BOOLEAN NOT NULL DEFAULT true,
-                "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT "ObraDeduccion_pkey" PRIMARY KEY ("id")
-            );
-            DO $$ BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_constraint WHERE conname = 'ObraDeduccion_obraId_fkey'
-                ) THEN
-                    ALTER TABLE "ObraDeduccion" ADD CONSTRAINT "ObraDeduccion_obraId_fkey"
-                    FOREIGN KEY ("obraId") REFERENCES "Obra"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-                END IF;
-            END $$;
-
-            CREATE TABLE IF NOT EXISTS "ArtistaPayout" (
-                "id" TEXT NOT NULL,
-                "obraId" TEXT NOT NULL,
-                "nombre" TEXT NOT NULL,
-                "porcentaje" DECIMAL(5,2) NOT NULL,
-                "base" TEXT NOT NULL,
-                "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT "ArtistaPayout_pkey" PRIMARY KEY ("id")
-            );
-            DO $$ BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_constraint WHERE conname = 'ArtistaPayout_obraId_fkey'
-                ) THEN
-                    ALTER TABLE "ArtistaPayout" ADD CONSTRAINT "ArtistaPayout_obraId_fkey"
-                    FOREIGN KEY ("obraId") REFERENCES "Obra"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-                END IF;
-            END $$;
-
-            CREATE TABLE IF NOT EXISTS "Invitado" (
-                "id" TEXT NOT NULL,
-                "funcionId" TEXT NOT NULL,
-                "nombre" TEXT NOT NULL,
-                "cantidad" INTEGER NOT NULL,
-                "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT "Invitado_pkey" PRIMARY KEY ("id")
-            );
-            DO $$ BEGIN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_constraint WHERE conname = 'Invitado_funcionId_fkey'
-                ) THEN
-                    ALTER TABLE "Invitado" ADD CONSTRAINT "Invitado_funcionId_fkey"
-                    FOREIGN KEY ("funcionId") REFERENCES "Funcion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-                END IF;
-            END $$;
-        `;
+        // 0. PATCH SCHEMA
         try {
-            await prisma.$executeRawUnsafe(schemaPatch);
-            console.log('Schema patched successfully');
+            await prisma.$executeRawUnsafe(`
+                CREATE TABLE IF NOT EXISTS "ObraDeduccion" (
+                    "id" TEXT NOT NULL, "obraId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+                    "porcentaje" DECIMAL(5,2), "monto" DECIMAL(15,2),
+                    "deduceAntesDeSala" BOOLEAN NOT NULL DEFAULT true,
+                    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT "ObraDeduccion_pkey" PRIMARY KEY ("id")
+                );
+                CREATE TABLE IF NOT EXISTS "ArtistaPayout" (
+                    "id" TEXT NOT NULL, "obraId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+                    "porcentaje" DECIMAL(5,2) NOT NULL, "base" TEXT NOT NULL,
+                    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT "ArtistaPayout_pkey" PRIMARY KEY ("id")
+                );
+                CREATE TABLE IF NOT EXISTS "Invitado" (
+                    "id" TEXT NOT NULL, "funcionId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+                    "cantidad" INTEGER NOT NULL,
+                    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT "Invitado_pkey" PRIMARY KEY ("id")
+                );
+            `);
+            log.push('✓ Schema patched');
         }
         catch (e) {
-            console.warn('Schema patch warning (non-fatal):', e.message);
+            log.push(`⚠ Schema patch: ${e.message?.substring(0, 100)}`);
         }
-        // 1. CLEAR DATABASE in correct order (leaf tables first)
+        // 1. CLEAR all tables
+        await safeDelete('_ArtistasEnObras');
         await safeDelete('LiquidacionReparto');
         await safeDelete('LiquidacionItem');
         await safeDelete('LiquidacionGrupalItem');
@@ -200,48 +175,85 @@ export const restoreBackup = async (req, res) => {
         await safeDelete('Funcion');
         await safeDelete('Obra');
         await safeDelete('User');
-        // 2. INSERT DATA in correct order (parents first)
-        if (data.users?.length)
-            await safeCreate(() => prisma.user.createMany({ data: data.users }));
-        if (data.obras?.length)
-            await safeCreate(() => prisma.obra.createMany({ data: data.obras }));
-        if (data.funciones?.length)
-            await safeCreate(() => prisma.funcion.createMany({ data: data.funciones }));
-        if (data.obraDeducciones?.length)
-            await safeCreate(() => prisma.obraDeduccion.createMany({ data: data.obraDeducciones }));
-        if (data.artistaPayouts?.length)
-            await safeCreate(() => prisma.artistaPayout.createMany({ data: data.artistaPayouts }));
-        if (data.logisticaRutas?.length)
-            await safeCreate(() => prisma.logisticaRuta.createMany({ data: data.logisticaRutas }));
-        if (data.checklists?.length)
-            await safeCreate(() => prisma.checklistTarea.createMany({ data: data.checklists }));
-        if (data.documentos?.length)
-            await safeCreate(() => prisma.documento.createMany({ data: data.documentos }));
-        if (data.mensajes?.length)
-            await safeCreate(() => prisma.mensaje.createMany({ data: data.mensajes }));
-        if (data.gastos?.length)
-            await safeCreate(() => prisma.gasto.createMany({ data: data.gastos }));
-        if (data.ventas?.length)
-            await safeCreate(() => prisma.venta.createMany({ data: data.ventas }));
-        if (data.invitados?.length)
-            await safeCreate(() => prisma.invitado.createMany({ data: data.invitados }));
-        if (data.liquidacionGrupals?.length)
-            await safeCreate(() => prisma.liquidacionGrupal.createMany({ data: data.liquidacionGrupals }));
-        if (data.liquidaciones?.length)
-            await safeCreate(() => prisma.liquidacion.createMany({ data: data.liquidaciones }));
-        if (data.liquidacionGrupalItems?.length)
-            await safeCreate(() => prisma.liquidacionGrupalItem.createMany({ data: data.liquidacionGrupalItems }));
-        if (data.liquidacionItems?.length)
-            await safeCreate(() => prisma.liquidacionItem.createMany({ data: data.liquidacionItems }));
-        if (data.liquidacionRepartos?.length)
-            await safeCreate(() => prisma.liquidacionReparto.createMany({ data: data.liquidacionRepartos }));
-        res.json({ message: 'Backup restored successfully' });
+        // 2. INSERT in dependency order
+        if (data.users?.length) {
+            await safeCreate('users', () => prisma.user.createMany({ data: data.users }), data.users.length);
+        }
+        if (data.obras?.length) {
+            await safeCreate('obras', () => prisma.obra.createMany({ data: data.obras }), data.obras.length);
+        }
+        if (data.funciones?.length) {
+            await safeCreate('funciones', () => prisma.funcion.createMany({ data: data.funciones }), data.funciones.length);
+        }
+        if (data.obraDeducciones?.length) {
+            await safeCreate('obraDeducciones', () => prisma.obraDeduccion.createMany({ data: data.obraDeducciones }), data.obraDeducciones.length);
+        }
+        if (data.artistaPayouts?.length) {
+            await safeCreate('artistaPayouts', () => prisma.artistaPayout.createMany({ data: data.artistaPayouts }), data.artistaPayouts.length);
+        }
+        if (data.logisticaRutas?.length) {
+            await safeCreate('logisticaRutas', () => prisma.logisticaRuta.createMany({ data: data.logisticaRutas }), data.logisticaRutas.length);
+        }
+        if (data.checklists?.length) {
+            await safeCreate('checklists', () => prisma.checklistTarea.createMany({ data: data.checklists }), data.checklists.length);
+        }
+        if (data.documentos?.length) {
+            await safeCreate('documentos', () => prisma.documento.createMany({ data: data.documentos }), data.documentos.length);
+        }
+        if (data.mensajes?.length) {
+            await safeCreate('mensajes', () => prisma.mensaje.createMany({ data: data.mensajes }), data.mensajes.length);
+        }
+        if (data.gastos?.length) {
+            await safeCreate('gastos', () => prisma.gasto.createMany({ data: data.gastos }), data.gastos.length);
+        }
+        if (data.ventas?.length) {
+            await safeCreate('ventas', () => prisma.venta.createMany({ data: data.ventas }), data.ventas.length);
+        }
+        if (data.invitados?.length) {
+            await safeCreate('invitados', () => prisma.invitado.createMany({ data: data.invitados }), data.invitados.length);
+        }
+        if (data.liquidacionGrupals?.length) {
+            await safeCreate('liquidacionGrupals', () => prisma.liquidacionGrupal.createMany({ data: data.liquidacionGrupals }), data.liquidacionGrupals.length);
+        }
+        if (data.liquidaciones?.length) {
+            // Strip any nested relations that Prisma can't handle in createMany
+            const cleanLiquidaciones = data.liquidaciones.map((l) => {
+                const { items, repartos, comprobantes, funcion, grupal, ...clean } = l;
+                return clean;
+            });
+            await safeCreate('liquidaciones', () => prisma.liquidacion.createMany({ data: cleanLiquidaciones }), cleanLiquidaciones.length);
+        }
+        if (data.liquidacionGrupalItems?.length) {
+            await safeCreate('liquidacionGrupalItems', () => prisma.liquidacionGrupalItem.createMany({ data: data.liquidacionGrupalItems }), data.liquidacionGrupalItems.length);
+        }
+        if (data.liquidacionItems?.length) {
+            await safeCreate('liquidacionItems', () => prisma.liquidacionItem.createMany({ data: data.liquidacionItems }), data.liquidacionItems.length);
+        }
+        if (data.liquidacionRepartos?.length) {
+            await safeCreate('liquidacionRepartos', () => prisma.liquidacionReparto.createMany({ data: data.liquidacionRepartos }), data.liquidacionRepartos.length);
+        }
+        // 3. Verify counts
+        const counts = {
+            users: await prisma.user.count(),
+            obras: await prisma.obra.count(),
+            funciones: await prisma.funcion.count(),
+            liquidaciones: await prisma.liquidacion.count(),
+        };
+        log.push(`✓ Final counts: users=${counts.users}, obras=${counts.obras}, funciones=${counts.funciones}, liquidaciones=${counts.liquidaciones}`);
+        if (errors.length > 0) {
+            res.json({ message: 'Backup restored with errors', log, errors, counts });
+        }
+        else {
+            res.json({ message: 'Backup restored successfully', log, counts });
+        }
     }
     catch (error) {
         console.error('Error restoring backup:', error);
         res.status(500).json({
             error: 'Error al restaurar el backup',
-            details: error.message || 'Error desconocido'
+            details: error.message || 'Error desconocido',
+            log,
+            errors
         });
     }
 };
