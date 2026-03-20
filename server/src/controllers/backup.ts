@@ -220,9 +220,7 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
         if (data.checklists?.length) {
             await safeCreate('checklists', () => prisma.checklistTarea.createMany({ data: data.checklists }), data.checklists.length);
         }
-        if (data.documentos?.length) {
-            await safeCreate('documentos', () => prisma.documento.createMany({ data: data.documentos }), data.documentos.length);
-        }
+
         if (data.mensajes?.length) {
             await safeCreate('mensajes', () => prisma.mensaje.createMany({ data: data.mensajes }), data.mensajes.length);
         }
@@ -255,6 +253,11 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
         if (data.liquidacionRepartos?.length) {
             await safeCreate('liquidacionRepartos', () => prisma.liquidacionReparto.createMany({ data: data.liquidacionRepartos }), data.liquidacionRepartos.length);
         }
+        // Documentos go LAST because they can reference liquidaciones, obras, and funciones
+        if (data.documentos?.length) {
+            await safeCreate('documentos', () => prisma.documento.createMany({ data: data.documentos }), data.documentos.length);
+        }
+
 
         // 3. Verify counts
         const counts = {
