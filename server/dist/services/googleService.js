@@ -276,3 +276,84 @@ export const listCalendarEvents = async (userId) => {
         }
     }
 };
+const BACKUP_FOLDER_NAME = 'HTH Backups';
+/**
+ * Upload a backup JSON string to Google Drive.
+ * Uses the admin user's OAuth tokens (first user with role 'Admin' or 'Administrador' that has Google linked).
+ * Creates a 'HTH Backups' folder inside the existing 'HTH APP' root folder.
+ * Keeps only the latest 30 backups to avoid clutter.
+ */
+export const uploadBackupToDrive = async (backupJson, filename) => {
+    try {
+        // Find the admin user with a Google refresh token
+        const adminUser = await prisma.user.findFirst({
+            where: {
+                googleRefreshToken: { not: null },
+                rol: { in: ['Admin', 'Administrador'] }
+            }
+        });
+        if (!adminUser) {
+            console.warn('[Drive Backup] No admin user with Google linked found. Skipping Drive upload.');
+            return null;
+        }
+        const auth = await getAuthClientForUser(adminUser.id);
+        const drive = google.drive({ version: 'v3', auth });
+        // Get or create root 'HTH APP' folder
+        const rootFolderId = await getOrCreateRootFolder(drive);
+        // Get or create 'HTH Backups' subfolder
+        const backupFolderSearch = await drive.files.list({
+            q: `name = '${BACKUP_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and '${rootFolderId}' in parents and trashed = false`,
+            fields: 'files(id)',
+        });
+        let backupFolderId;
+        if (backupFolderSearch.data.files && backupFolderSearch.data.files.length > 0) {
+            backupFolderId = backupFolderSearch.data.files[0].id;
+        }
+        else {
+            const folder = await drive.files.create({
+                requestBody: {
+                    name: BACKUP_FOLDER_NAME,
+                    mimeType: 'application/vnd.google-apps.folder',
+                    parents: [rootFolderId],
+                },
+                fields: 'id',
+            });
+            backupFolderId = folder.data.id;
+            console.log(`[Drive Backup] Created 'HTH Backups' folder: ${backupFolderId}`);
+        }
+        // Upload the backup file
+        const { Readable } = await import('stream');
+        const stream = Readable.from([backupJson]);
+        const uploadRes = await drive.files.create({
+            requestBody: {
+                name: filename,
+                parents: [backupFolderId],
+            },
+            media: {
+                mimeType: 'application/json',
+                body: stream,
+            },
+            fields: 'id, webViewLink',
+        });
+        console.log(`[Drive Backup] Backup uploaded: ${filename} → ${uploadRes.data.webViewLink}`);
+        // Clean up old backups (keep only latest 30)
+        const allBackups = await drive.files.list({
+            q: `'${backupFolderId}' in parents and trashed = false`,
+            fields: 'files(id, name, createdTime)',
+            orderBy: 'createdTime desc',
+        });
+        const files = allBackups.data.files || [];
+        if (files.length > 30) {
+            const toDelete = files.slice(30);
+            for (const f of toDelete) {
+                await drive.files.delete({ fileId: f.id });
+                console.log(`[Drive Backup] Deleted old backup: ${f.name}`);
+            }
+        }
+        return uploadRes.data.webViewLink || null;
+    }
+    catch (error) {
+        console.error('[Drive Backup] Failed to upload backup to Drive:', error.message);
+        return null; // Non-fatal — local backup still exists
+    }
+};

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import prisma from '../lib/prisma.js';
+import { uploadBackupToDrive } from '../services/googleService.js';
 const BACKUP_DIR = path.join(process.cwd(), 'backups');
 export const createBackup = async (req, res) => {
     try {
@@ -52,8 +53,20 @@ export const createBackup = async (req, res) => {
                 liquidacionRepartos
             }
         };
-        fs.writeFileSync(filepath, JSON.stringify(backupData, null, 2));
-        console.log(`Backup created: ${filename}`);
+        const backupJson = JSON.stringify(backupData, null, 2);
+        // Save locally
+        if (!fs.existsSync(BACKUP_DIR))
+            fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        fs.writeFileSync(filepath, backupJson);
+        console.log(`Backup created locally: ${filename}`);
+        // Upload to Google Drive (non-blocking — won't break the backup if Drive fails)
+        uploadBackupToDrive(backupJson, filename).then(driveLink => {
+            if (driveLink) {
+                console.log(`Backup uploaded to Drive: ${driveLink}`);
+            }
+        }).catch(err => {
+            console.warn('Drive backup upload failed (non-fatal):', err.message);
+        });
         if (res) {
             res.json({ message: 'Backup created successfully', filename, timestamp: backupData.meta.timestamp });
         }

@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import prisma from '../lib/prisma.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { uploadBackupToDrive } from '../services/googleService.js';
 
 const BACKUP_DIR = path.join(process.cwd(), 'backups');
 
@@ -66,9 +67,21 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
             }
         };
 
-        fs.writeFileSync(filepath, JSON.stringify(backupData, null, 2));
+        const backupJson = JSON.stringify(backupData, null, 2);
 
-        console.log(`Backup created: ${filename}`);
+        // Save locally
+        if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        fs.writeFileSync(filepath, backupJson);
+        console.log(`Backup created locally: ${filename}`);
+
+        // Upload to Google Drive (non-blocking — won't break the backup if Drive fails)
+        uploadBackupToDrive(backupJson, filename).then(driveLink => {
+            if (driveLink) {
+                console.log(`Backup uploaded to Drive: ${driveLink}`);
+            }
+        }).catch(err => {
+            console.warn('Drive backup upload failed (non-fatal):', err.message);
+        });
 
         if (res) {
             res.json({ message: 'Backup created successfully', filename, timestamp: backupData.meta.timestamp });
@@ -79,6 +92,7 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
         if (res) res.status(500).json({ error: 'Error creating backup' });
     }
 };
+
 
 export const getBackups = async (req: AuthRequest, res: Response) => {
     try {
