@@ -130,12 +130,12 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
         if (existingData) {
             setFormData(prev => ({
                 ...prev,
-                // Only auto-populate if the current value is empty
+                // Only auto-populate if the current value is empty.
+                // linkVentaTicketera is intentionally excluded: it changes per function.
                 salaDireccion: prev.salaDireccion.trim() === '' ? (existingData.salaDireccion || prev.salaDireccion) : prev.salaDireccion,
                 ciudad: prev.ciudad.trim() === '' ? (existingData.ciudad || prev.ciudad) : prev.ciudad,
                 pais: prev.pais.trim() === '' || prev.pais === 'Argentina' ? (existingData.pais || prev.pais) : prev.pais,
                 capacidadSala: prev.capacidadSala === '' ? (existingData.capacidadSala?.toString() || prev.capacidadSala) : prev.capacidadSala,
-                linkVentaTicketera: prev.linkVentaTicketera.trim() === '' ? (existingData.linkVentaTicketera || prev.linkVentaTicketera) : prev.linkVentaTicketera,
                 userVentaTicketera: prev.userVentaTicketera.trim() === '' ? (existingData.userVentaTicketera || prev.userVentaTicketera) : prev.userVentaTicketera,
                 passVentaTicketera: prev.passVentaTicketera.trim() === '' ? (existingData.passVentaTicketera || prev.passVentaTicketera) : prev.passVentaTicketera,
                 linkMonitoreoVenta: prev.linkMonitoreoVenta.trim() === '' ? (existingData.linkMonitoreoVenta || prev.linkMonitoreoVenta) : prev.linkMonitoreoVenta,
