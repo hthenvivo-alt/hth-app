@@ -113,7 +113,9 @@ const Funciones: React.FC = () => {
 
     const generateExportText = () => {
         const title = selectedObra ? `*${selectedObra}*` : '*Funciones HTH*';
-        const sorted = [...filteredFunciones].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+        const sorted = [...filteredFunciones]
+            .filter(f => f.confirmada !== false && new Date(f.fecha) >= now)
+            .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
         const lines = sorted.map(f => {
             const date = new Date(f.fecha);
             const dayName = date.toLocaleString('es-AR', { weekday: 'short' });
