@@ -23,7 +23,10 @@ import {
     RefreshCw,
     ListTodo,
     AlertTriangle,
-    Users
+    Users,
+    Share2,
+    Copy,
+    Check
 } from 'lucide-react';
 
 interface Funcion {
@@ -63,6 +66,8 @@ const Funciones: React.FC = () => {
     const [syncingId, setSyncingId] = React.useState<string | null>(null);
     const [showPast, setShowPast] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<'list' | 'calendar'>('list');
+    const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
+    const [copied, setCopied] = React.useState(false);
 
     // Filter States
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -105,6 +110,29 @@ const Funciones: React.FC = () => {
 
     const futureFunciones = filteredFunciones.filter(f => new Date(f.fecha) >= now).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
     const pastFunciones = filteredFunciones.filter(f => new Date(f.fecha) < now).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+
+    const generateExportText = () => {
+        const title = selectedObra ? `*${selectedObra}*` : '*Funciones HTH*';
+        const sorted = [...filteredFunciones].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+        const lines = sorted.map(f => {
+            const date = new Date(f.fecha);
+            const dayName = date.toLocaleString('es-AR', { weekday: 'short' });
+            const dayNum = String(date.getDate()).padStart(2, '0');
+            const month = date.toLocaleString('es-AR', { month: 'short' });
+            const year = date.getFullYear();
+            const time = date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const sala = f.salaNombre || 'Teatro a confirmar';
+            const ciudad = f.ciudad;
+            return `📍 ${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${dayNum} ${month.charAt(0).toUpperCase() + month.slice(1)} ${year} · ${time}hs – ${sala}, ${ciudad}`;
+        });
+        return `${title}\n\n${lines.join('\n')}`;
+    };
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(generateExportText());
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     const handleSuccess = () => {
         setIsModalOpen(false);
@@ -367,6 +395,16 @@ const Funciones: React.FC = () => {
                             <span>Sincronizar con Calendar</span>
                         </button>
                     )}
+                    {filteredFunciones.length > 0 && (
+                        <button
+                            onClick={() => setIsExportModalOpen(true)}
+                            className="flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white px-5 py-2.5 rounded-xl font-semibold transition-all border border-white/10"
+                            title="Exportar listado para compartir"
+                        >
+                            <Share2 size={18} />
+                            <span>Exportar</span>
+                        </button>
+                    )}
                     {canManage && (
                         <button
                             onClick={() => openCreateModal()}
@@ -520,6 +558,43 @@ const Funciones: React.FC = () => {
                     />
                 )}
             </Modal>
+
+            {/* Export Modal */}
+            {isExportModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+                    onClick={() => setIsExportModalOpen(false)}
+                >
+                    <div
+                        className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="font-bold text-lg">Exportar Funciones</h3>
+                                <p className="text-xs text-gray-500 mt-0.5">{filteredFunciones.length} función{filteredFunciones.length !== 1 ? 'es' : ''} · listo para copiar y pegar</p>
+                            </div>
+                            <button
+                                onClick={handleCopy}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                                    copied
+                                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                        : 'bg-primary-500 hover:bg-primary-600 text-white'
+                                }`}
+                            >
+                                {copied ? <><Check size={16} /> Copiado!</> : <><Copy size={16} /> Copiar</>}
+                            </button>
+                        </div>
+                        <textarea
+                            readOnly
+                            value={generateExportText()}
+                            className="w-full h-64 px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-sm text-gray-300 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                            onClick={e => (e.target as HTMLTextAreaElement).select()}
+                        />
+                        <p className="text-[10px] text-gray-600 mt-3 text-center">Hacé clic en el texto para seleccionar todo · o usá el botón Copiar</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
