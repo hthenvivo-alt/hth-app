@@ -1144,34 +1144,60 @@ const LiquidacionDetalle: React.FC = () => {
                                         <span className="font-black text-white">{symbol} {reparto.monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                                        <div className="flex flex-col">
+                                        <div className="flex flex-col gap-1">
                                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Retención AAA <span className="text-primary-400">(6%)</span></span>
+                                            {/* Toggle aplicaAAA */}
                                             <button
                                                 type="button"
-                                                onClick={() => updateReparto(idx, 'retencionAAA', Math.round(reparto.monto * 0.06 * 100) / 100)}
-                                                className="text-[9px] text-gray-600 hover:text-primary-400 transition-colors text-left mt-0.5"
+                                                onClick={() => {
+                                                    const nuevoEstado = !repartos[idx].aplicaAAA;
+                                                    const nuevaRetencion = nuevoEstado
+                                                        ? Math.round(calculatedRepartos[idx].monto * 0.06 * 100) / 100
+                                                        : 0;
+                                                    const newRepartos = [...repartos];
+                                                    newRepartos[idx] = { ...newRepartos[idx], aplicaAAA: nuevoEstado, retencionAAA: nuevaRetencion };
+                                                    setRepartos(newRepartos);
+                                                }}
+                                                className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-colors mt-0.5 ${repartos[idx].aplicaAAA ? 'text-amber-400 hover:text-amber-300' : 'text-gray-600 hover:text-gray-400'}`}
                                             >
-                                                ↺ Recalcular 6%
+                                                <span className={`inline-flex w-7 h-3.5 rounded-full transition-colors relative ${repartos[idx].aplicaAAA ? 'bg-amber-400/30 border border-amber-400/50' : 'bg-white/10 border border-white/10'}`}>
+                                                    <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full transition-all ${repartos[idx].aplicaAAA ? 'left-3.5 bg-amber-400' : 'left-0.5 bg-gray-500'}`} />
+                                                </span>
+                                                {repartos[idx].aplicaAAA ? 'Aplica' : 'No aplica'}
                                             </button>
+                                            {repartos[idx].aplicaAAA && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => updateReparto(idx, 'retencionAAA', Math.round(calculatedRepartos[idx].monto * 0.06 * 100) / 100)}
+                                                    className="text-[9px] text-gray-600 hover:text-primary-400 transition-colors text-left"
+                                                >
+                                                    ↺ Recalcular 6%
+                                                </button>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-600">$</span>
+                                            <span className={`text-xs transition-colors ${repartos[idx].aplicaAAA ? 'text-gray-600' : 'text-gray-700'}`}>$</span>
                                             <input
                                                 type="text"
-                                                value={reparto.retencionAAA || ''}
-                                                onChange={(e) => updateReparto(idx, 'retencionAAA', e.target.value)}
+                                                value={repartos[idx].aplicaAAA ? (reparto.retencionAAA || '') : '0'}
+                                                onChange={(e) => { if (repartos[idx].aplicaAAA) updateReparto(idx, 'retencionAAA', e.target.value); }}
                                                 onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
+                                                    if (e.key === 'Enter' && repartos[idx].aplicaAAA) {
                                                         const res = evaluateArithmetic(String(reparto.retencionAAA));
                                                         if (res !== null) updateReparto(idx, 'retencionAAA', res);
                                                     }
                                                 }}
                                                 onBlur={() => {
-                                                    const res = evaluateArithmetic(String(reparto.retencionAAA));
-                                                    if (res !== null) updateReparto(idx, 'retencionAAA', res);
+                                                    if (repartos[idx].aplicaAAA) {
+                                                        const res = evaluateArithmetic(String(reparto.retencionAAA));
+                                                        if (res !== null) updateReparto(idx, 'retencionAAA', res);
+                                                    }
                                                 }}
+                                                disabled={!repartos[idx].aplicaAAA}
                                                 placeholder="0.00"
-                                                className="w-20 bg-black/20 border border-white/10 rounded px-2 py-1 text-right text-xs font-bold text-red-400 focus:border-primary-500 outline-none"
+                                                className={`w-20 border rounded px-2 py-1 text-right text-xs font-bold focus:outline-none transition-colors ${repartos[idx].aplicaAAA
+                                                    ? 'bg-black/20 border-white/10 text-red-400 focus:border-primary-500'
+                                                    : 'bg-black/10 border-white/5 text-gray-600 cursor-not-allowed'}`}
                                             />
                                         </div>
                                     </div>
