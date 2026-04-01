@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { getMensajes, createMensaje, deleteMensaje, togglePin, toggleArchive } from '../controllers/mensajes.js';
-import { authenticate } from '../middleware/auth.js';
+import { flexAuth } from '../middleware/flexAuth.js';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(flexAuth);
 
 router.get('/', getMensajes);
 router.post('/', createMensaje);

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { getDashboardStats } from '../controllers/stats.js';
-import { authenticate } from '../middleware/auth.js';
+import { flexAuth } from '../middleware/flexAuth.js';
 
 const router = Router();
 
-router.get('/', authenticate, getDashboardStats);
+router.get('/', flexAuth, getDashboardStats);
 
 export default router;

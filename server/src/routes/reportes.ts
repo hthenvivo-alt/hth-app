@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { getArtistReport, getObraSalesEvolution, getMatrixReportData } from '../controllers/reportes.js';
-import { authenticate } from '../middleware/auth.js';
+import { flexAuth } from '../middleware/flexAuth.js';
 
 const router = Router();
 
-router.get('/artista', authenticate, getArtistReport);
-router.get('/evolucion-obra/:obraId', authenticate, getObraSalesEvolution);
-router.get('/matrix-report', authenticate, getMatrixReportData);
+router.get('/artista', flexAuth, getArtistReport);
+router.get('/evolucion-obra/:obraId', flexAuth, getObraSalesEvolution);
+router.get('/matrix-report', flexAuth, getMatrixReportData);
 
 export default router;

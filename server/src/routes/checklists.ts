@@ -7,15 +7,15 @@ import {
     toggleChecklist,
     deleteChecklist
 } from '../controllers/checklists.js';
-import { authenticate } from '../middleware/auth.js';
+import { flexAuth } from '../middleware/flexAuth.js';
 
 const router = Router();
 
-router.get('/obra/:obraId', authenticate, getChecklistsByObra);
-router.get('/funcion/:funcionId', authenticate, getChecklistsByFuncion);
-router.post('/', authenticate, createChecklist);
-router.patch('/:id', authenticate, updateChecklist);
-router.patch('/:id/toggle', authenticate, toggleChecklist);
-router.delete('/:id', authenticate, deleteChecklist);
+router.get('/obra/:obraId', flexAuth, getChecklistsByObra);
+router.get('/funcion/:funcionId', flexAuth, getChecklistsByFuncion);
+router.post('/', flexAuth, createChecklist);
+router.patch('/:id', flexAuth, updateChecklist);
+router.patch('/:id/toggle', flexAuth, toggleChecklist);
+router.delete('/:id', flexAuth, deleteChecklist);
 
 export default router;

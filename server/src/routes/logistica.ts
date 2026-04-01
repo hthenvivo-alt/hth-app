@@ -4,12 +4,12 @@ import {
     upsertLogistica,
     deleteLogistica
 } from '../controllers/logistica.js';
-import { authenticate } from '../middleware/auth.js';
+import { flexAuth } from '../middleware/flexAuth.js';
 
 const router = Router();
 
-router.get('/:funcionId', authenticate, getLogisticaByFuncion);
-router.post('/:funcionId', authenticate, upsertLogistica);
-router.delete('/:funcionId', authenticate, deleteLogistica);
+router.get('/:funcionId', flexAuth, getLogisticaByFuncion);
+router.post('/:funcionId', flexAuth, upsertLogistica);
+router.delete('/:funcionId', flexAuth, deleteLogistica);
 
 export default router;

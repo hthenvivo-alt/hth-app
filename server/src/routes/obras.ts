@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { getObras, createObra, updateObra, deleteObra } from '../controllers/obras.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authorize } from '../middleware/auth.js';
+import { flexAuth } from '../middleware/flexAuth.js';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(flexAuth);
 
 // List Obras (Needed for dropdowns in other forms)
 router.get('/', getObras);
