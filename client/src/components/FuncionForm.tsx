@@ -24,8 +24,6 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
         linkMonitoreoVenta: '',
         notasProduccion: '',
         confirmada: true,
-        acuerdoPorcentaje: '',
-        acuerdoSobre: 'Neta' as 'Bruta' | 'Neta',
     });
 
     const [fechas, setFechas] = useState<{ date: string, time: string }[]>(() => {
@@ -82,8 +80,6 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                 linkMonitoreoVenta: initialData.linkMonitoreoVenta || '',
                 notasProduccion: initialData.notasProduccion || '',
                 confirmada: initialData.confirmada !== undefined ? initialData.confirmada : true,
-                acuerdoPorcentaje: initialData.acuerdoPorcentaje?.toString() || '',
-                acuerdoSobre: (initialData.acuerdoSobre as 'Bruta' | 'Neta') || 'Neta',
             });
 
             if (initialData.fecha) {
@@ -194,7 +190,6 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                 fechas: isoFechas, // Send array
                 capacidadSala: formData.capacidadSala ? parseInt(formData.capacidadSala) : null,
                 precioEntradaBase: formData.precioEntradaBase ? parseFloat(formData.precioEntradaBase) : null,
-                acuerdoPorcentaje: formData.acuerdoPorcentaje !== '' ? parseFloat(formData.acuerdoPorcentaje) : null,
             };
 
             if (initialData?.id) {
@@ -429,37 +424,6 @@ const FuncionForm: React.FC<FuncionFormProps> = ({ initialData, onSuccess, onCan
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                         placeholder="Detalles logísticos o técnicos..."
                     />
-                </div>
-
-                {/* Acuerdo con la Sala */}
-                <div className="md:col-span-2 p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
-                    <div>
-                        <span className="text-sm font-bold text-white">Acuerdo con la Sala</span>
-                        <p className="text-xs text-gray-500 mt-0.5">Porcentaje que se le paga a la sala. Se autocompleta en la liquidación.</p>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="flex-1">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Porcentaje (%)</label>
-                            <input
-                                type="text"
-                                value={formData.acuerdoPorcentaje}
-                                onChange={(e) => setFormData({ ...formData, acuerdoPorcentaje: e.target.value })}
-                                className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-                                placeholder="Ej: 30"
-                            />
-                        </div>
-                        <div className="w-40">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Sobre</label>
-                            <select
-                                value={formData.acuerdoSobre}
-                                onChange={(e) => setFormData({ ...formData, acuerdoSobre: e.target.value as 'Bruta' | 'Neta' })}
-                                className="w-full px-4 py-2.5 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-                            >
-                                <option value="Neta">Recaudación Neta</option>
-                                <option value="Bruta">Recaudación Bruta</option>
-                            </select>
-                        </div>
-                    </div>
                 </div>
 
                 <div className="md:col-span-2 flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
