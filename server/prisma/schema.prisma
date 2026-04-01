@@ -98,8 +98,6 @@ model Funcion {
   userVentaTicketera        String?
   vendidas                  Int              @default(0)
   confirmada                Boolean          @default(true)
-  acuerdoPorcentaje         Decimal?         @db.Decimal(5, 2)
-  acuerdoSobre              String?          @default("Neta")
   checklists                ChecklistTarea[]
   documentos                Documento[]
   obra                      Obra             @relation(fields: [obraId], references: [id], onDelete: Cascade)

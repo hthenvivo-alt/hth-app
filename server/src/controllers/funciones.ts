@@ -59,7 +59,7 @@ export const getFunciones = async (req: AuthRequest, res: Response) => {
 
         res.json(funcionesWithStats);
     } catch (error) {
-        res.status(500).json({ error: 'Error fetching funciones' });
+        res.status(500).json({ error: 'Error fetching funciones', detail: (error as any)?.message });
     }
 };
 
