@@ -217,6 +217,8 @@ const LiquidacionDetalle: React.FC = () => {
             // Priority 2: New Settlement (Suggestions from previous function same Obra/Sala)
             setFacturacionTotal(Number(funcion.ultimaFacturacionBruta) || 0);
             setVendidas(Number(funcion.vendidas) || 0);
+            if (funcion.acuerdoPorcentaje) setAcuerdoPorcentaje(Number(funcion.acuerdoPorcentaje));
+            if (funcion.acuerdoSobre) setAcuerdoSobre(funcion.acuerdoSobre as 'Bruta' | 'Neta');
 
             if (funcion?.obra?.artistaPayouts) {
                 setRepartos((funcion?.obra?.artistaPayouts || []).map((p: any) => ({
@@ -246,6 +248,8 @@ const LiquidacionDetalle: React.FC = () => {
             // Priority 3: Fallback defaults
             setFacturacionTotal(Number(funcion.ultimaFacturacionBruta) || 0);
             setVendidas(Number(funcion.vendidas) || 0);
+            if (funcion.acuerdoPorcentaje) setAcuerdoPorcentaje(Number(funcion.acuerdoPorcentaje));
+            if (funcion.acuerdoSobre) setAcuerdoSobre(funcion.acuerdoSobre as 'Bruta' | 'Neta');
 
             if (funcion?.obra?.artistaPayouts) {
                 setRepartos((funcion?.obra?.artistaPayouts || []).map((p: any) => ({
