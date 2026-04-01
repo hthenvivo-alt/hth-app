@@ -1,6 +1,27 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { execSync } from 'child_process';
+
+// ─────────────────────────────────────────────────────────────
+// MAINTENANCE
+// ─────────────────────────────────────────────────────────────
+
+export const runMigration = async (req: AuthRequest, res: Response) => {
+    try {
+        const output = execSync('npx prisma migrate deploy', {
+            cwd: process.cwd(),
+            timeout: 60000,
+            encoding: 'utf8',
+            env: { ...process.env }
+        });
+        res.json({ success: true, output });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message, stderr: error.stderr });
+    }
+};
+
+
 
 export const getAgentBoard = async (req: AuthRequest, res: Response) => {
     try {

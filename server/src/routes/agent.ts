@@ -10,6 +10,7 @@ import {
     getAgentObraEvolucionVentas,
     getAgentGastosByObra,
     getAgentProjectionInput,
+    runMigration,
 } from '../controllers/agent.js';
 import { agentAuthenticate } from '../middleware/agentAuth.js';
 
@@ -20,6 +21,9 @@ router.use(agentAuthenticate);
 
 router.get('/board', getAgentBoard);
 router.get('/reference', getReferenceData);
+
+// Maintenance
+router.post('/run-migration', runMigration);
 
 // Funciones
 router.get('/funciones', getAgentFunciones);
@@ -34,3 +38,4 @@ router.get('/obras/:id/gastos', getAgentGastosByObra);
 router.get('/obras/:id', getAgentObraDetalle);
 
 export default router;
+
