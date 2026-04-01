@@ -101,6 +101,8 @@ export const getAgentFunciones = async (req: AuthRequest, res: Response) => {
             confirmada: f.confirmada,
             capacidadTotal: f.capacidadSala ?? 0,
             precioEntradaBase: f.precioEntradaBase ? Number(f.precioEntradaBase) : null,
+            acuerdoPorcentaje: f.acuerdoPorcentaje ? Number(f.acuerdoPorcentaje) : null,
+            acuerdoSobre: f.acuerdoSobre ?? 'Neta',
             entradasVendidas: f.vendidas ?? 0,
             porcentajeOcupacion: f.capacidadSala && f.capacidadSala > 0
                 ? Math.round(((f.vendidas ?? 0) / f.capacidadSala) * 100)
@@ -252,6 +254,7 @@ export const getAgentObraDetalle = async (req: AuthRequest, res: Response) => {
                     select: {
                         id: true, fecha: true, salaNombre: true, ciudad: true,
                         confirmada: true, vendidas: true, capacidadSala: true,
+                        acuerdoPorcentaje: true, acuerdoSobre: true,
                         liquidacion: { select: { confirmada: true, recaudacionBruta: true, resultadoFuncion: true } }
                     },
                     orderBy: { fecha: 'desc' }
@@ -291,6 +294,8 @@ export const getAgentObraEvolucionVentas = async (req: AuthRequest, res: Respons
             pais: f.pais,
             capacidadSala: f.capacidadSala,
             precioEntradaBase: f.precioEntradaBase ? Number(f.precioEntradaBase) : null,
+            acuerdoPorcentaje: f.acuerdoPorcentaje ? Number(f.acuerdoPorcentaje) : null,
+            acuerdoSobre: f.acuerdoSobre,
             entradasVendidasFinal: f.vendidas,
             porcentajeOcupacionFinal: f.capacidadSala && f.capacidadSala > 0
                 ? Math.round((f.vendidas / f.capacidadSala) * 100)
@@ -434,6 +439,8 @@ export const getAgentProjectionInput = async (req: AuthRequest, res: Response) =
                 pais: funcion.pais,
                 capacidadSala: funcion.capacidadSala,
                 precioEntradaBase: funcion.precioEntradaBase ? Number(funcion.precioEntradaBase) : null,
+                acuerdoPorcentaje: funcion.acuerdoPorcentaje ? Number(funcion.acuerdoPorcentaje) : null,
+                acuerdoSobre: funcion.acuerdoSobre,
                 entradasVendidas: funcion.vendidas,
                 confirmada: funcion.confirmada,
                 liquidacion: funcion.liquidacion,
@@ -481,6 +488,8 @@ export const getAgentProjectionInput = async (req: AuthRequest, res: Response) =
                     ciudad: f.ciudad,
                     capacidadSala: f.capacidadSala,
                     precioEntradaBase: f.precioEntradaBase ? Number(f.precioEntradaBase) : null,
+                    acuerdoPorcentaje: f.acuerdoPorcentaje ? Number(f.acuerdoPorcentaje) : null,
+                    acuerdoSobre: f.acuerdoSobre,
                     entradasVendidasFinal: f.vendidas,
                     porcentajeOcupacionFinal: f.capacidadSala && f.capacidadSala > 0
                         ? Math.round((f.vendidas / f.capacidadSala) * 100) : null,
