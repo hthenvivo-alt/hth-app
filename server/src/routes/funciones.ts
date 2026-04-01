@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { getFunciones, createFuncion, updateFuncion, deleteFuncion } from '../controllers/funciones.js';
-import { authenticate } from '../middleware/auth.js';
+import { flexAuth } from '../middleware/flexAuth.js';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(flexAuth);
 
 router.get('/', getFunciones);
 router.post('/', createFuncion);
