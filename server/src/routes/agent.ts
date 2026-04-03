@@ -10,6 +10,8 @@ import {
     getAgentObraEvolucionVentas,
     getAgentGastosByObra,
     getAgentProjectionInput,
+    getAgentLiquidacion,
+    saveAgentLiquidacion,
     runMigration,
 } from '../controllers/agent.js';
 import { agentAuthenticate } from '../middleware/agentAuth.js';
@@ -36,6 +38,10 @@ router.put('/funciones/:id', updateAgentFuncion);
 router.get('/obras/:id/evolucion-ventas', getAgentObraEvolucionVentas);
 router.get('/obras/:id/gastos', getAgentGastosByObra);
 router.get('/obras/:id', getAgentObraDetalle);
+
+// Liquidaciones
+router.get('/funciones/:id/liquidacion', getAgentLiquidacion);
+router.post('/funciones/:id/liquidacion', saveAgentLiquidacion);
 
 export default router;
 
