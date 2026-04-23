@@ -36,28 +36,36 @@ export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
     const fechaStr = `${day}/${month}/${year}`;
+    const horaStr = `${hours}:${minutes}hs`;
 
     // COLORS
     const primary = [220, 38, 38]; // HTH Red
     const dark = [30, 30, 30];
 
-    // HEADER
+    // HEADER (altura aumentada a 52 para incluir línea de horario)
     doc.setFillColor(dark[0], dark[1], dark[2]);
-    doc.rect(0, 0, 210, 45, 'F');
+    doc.rect(0, 0, 210, 52, 'F');
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('HOJA DE RUTA / LOGÍSTICA', 15, 20);
+    doc.text('HOJA DE RUTA / LOGÍSTICA', 15, 18);
 
     doc.setFontSize(14);
-    doc.text(obraNombre.toUpperCase(), 15, 30);
+    doc.text(obraNombre.toUpperCase(), 15, 28);
 
-    doc.setFontSize(10);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    // Fecha y hora destacadas en línea separada
+    doc.text(`${fechaStr}  |  ${horaStr}`, 15, 38);
+
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    const infoHeader = `${fechaStr} - ${funcion.salaNombre} (${funcion.ciudad})`;
-    doc.text(infoHeader, 15, 38);
+    const infoHeader = `${funcion.salaNombre} (${funcion.ciudad})`;
+    doc.text(infoHeader, 15, 46);
 
     // LOGO
     try {
@@ -76,7 +84,7 @@ export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
         console.error('Error adding logo to PDF:', e);
     }
 
-    let y = 55;
+    let y = 62;
 
     // SECTION: GENERAL INFO
     doc.setTextColor(primary[0], primary[1], primary[2]);
@@ -89,7 +97,7 @@ export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
         startY: y,
         body: [
             ['Función', obraNombre],
-            ['Fecha', fechaStr],
+            [{ content: 'Fecha y Horario', styles: { fontStyle: 'bold' } }, { content: `${fechaStr}  —  ${horaStr}`, styles: { fontStyle: 'bold', textColor: [30, 30, 30] } }],
             ['Lugar', `${funcion.salaNombre}, ${funcion.ciudad}`],
             ['Dirección', funcion.salaDireccion || '-'],
             ['Citación Artista', logistica?.horarioCitacionArtista || '-'],
