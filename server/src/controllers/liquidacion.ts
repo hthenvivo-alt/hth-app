@@ -322,6 +322,7 @@ export const getComprobantes = async (req: AuthRequest, res: Response) => {
     const funcionId = req.params.funcionId as string;
 
     try {
+        // 1. Comprobantes subidos directamente en la liquidación
         const liquidacion = await prisma.liquidacion.findUnique({
             where: { funcionId },
             include: {
@@ -332,11 +333,33 @@ export const getComprobantes = async (req: AuthRequest, res: Response) => {
             }
         });
 
-        if (!liquidacion) {
-            return res.json([]);
-        }
+        const comprobantesLiquidacion = liquidacion
+            ? (liquidacion as any).comprobantes.map((c: any) => ({ ...c, origen: 'liquidacion' }))
+            : [];
 
-        res.json((liquidacion as any).comprobantes);
+        // 2. Comprobantes subidos como vouchers de gastos en la pantalla de Finanzas
+        const gastos = await prisma.gasto.findMany({
+            where: { funcionId },
+            include: { comprobanteDocumento: true }
+        });
+
+        const comprobantesGastos = (gastos as any)
+            .filter((g: any) => g.comprobanteDocumento && g.comprobanteDocumento.linkDrive)
+            .map((g: any) => ({
+                ...g.comprobanteDocumento,
+                origen: 'gasto',
+                nombreDocumento: g.comprobanteDocumento.nombreDocumento || g.descripcion || 'Comprobante de gasto'
+            }));
+
+        // Merge — avoid duplicates by id
+        const seen = new Set<string>();
+        const todos = [...comprobantesLiquidacion, ...comprobantesGastos].filter(c => {
+            if (seen.has(c.id)) return false;
+            seen.add(c.id);
+            return true;
+        });
+
+        res.json(todos);
     } catch (error) {
         console.error('Error fetching comprobantes:', error);
         res.status(500).json({ error: 'Error al obtener los comprobantes' });

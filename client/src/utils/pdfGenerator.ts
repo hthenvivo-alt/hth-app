@@ -3,6 +3,15 @@ import { PDFDocument } from 'pdf-lib';
 import autoTable from 'jspdf-autotable';
 import api from '../lib/api';
 
+// Helper: obtiene la URL base del servidor (sin /api al final)
+// En producción VITE_API_URL apunta al backend, e.g. https://hth-backend-bkdz.onrender.com/api
+// Las imágenes están en /uploads que es una ruta raíz del servidor.
+const getBackendBase = (): string => {
+    const base = import.meta.env.VITE_API_URL as string || 'http://localhost:3000';
+    // Quitar /api del final si existe
+    return base.replace(/\/api\/?$/, '');
+};
+
 const compressImage = (img: HTMLImageElement): string => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -423,8 +432,9 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
         doc.text('COMPROBANTE BORDEREAUX ADJUNTO', 15, 13);
 
         try {
-            const imgUrl = `${api.defaults.baseURL?.replace('/api', '')}${liqData.bordereauxImage}`;
+            const imgUrl = `${getBackendBase()}${liqData.bordereauxImage}`;
             const img = new Image();
+            img.crossOrigin = 'anonymous';
             img.src = imgUrl;
 
             await new Promise((resolve) => {
@@ -469,8 +479,9 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
 
             if (isImage) {
                 try {
-                    const imgUrl = `${api.defaults.baseURL?.replace('/api', '')}${docEntry.linkDrive}`;
+                    const imgUrl = `${getBackendBase()}${docEntry.linkDrive}`;
                     const img = new Image();
+                    img.crossOrigin = 'anonymous';
                     img.src = imgUrl;
 
                     await new Promise((resolve) => {
@@ -523,7 +534,7 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
             const reportPdfBytes = doc.output('arraybuffer');
             const reportPdfDoc = await PDFDocument.load(reportPdfBytes);
 
-            const bordereauxUrl = `${api.defaults.baseURL?.replace('/api', '')}${liqData.bordereauxImage}`;
+            const bordereauxUrl = `${getBackendBase()}${liqData.bordereauxImage}`;
             const response = await fetch(bordereauxUrl);
             const bordereauxBytes = await response.arrayBuffer();
             const bordereauxPdfDoc = await PDFDocument.load(bordereauxBytes);
