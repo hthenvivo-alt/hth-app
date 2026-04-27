@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --ignore backups src/index.ts",
-    "build": "tsc",
+    "build": "npx prisma migrate resolve --applied 20260319142304_add_obra_deducciones || true && tsc",
     "start": "prisma migrate deploy && node dist/index.js",
 
     "prisma:generate": "prisma generate",
