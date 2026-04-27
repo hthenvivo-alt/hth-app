@@ -42,7 +42,7 @@ export const getSimulacion = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     try {
         const sim = await prisma.simulacionLiquidacion.findUnique({
-            where: { id },
+            where: { id: id as string },
             include: SIMULACION_INCLUDE
         });
         if (!sim) return res.status(404).json({ error: 'Simulación no encontrada' });
@@ -121,7 +121,7 @@ export const updateSimulacion = async (req: AuthRequest, res: Response) => {
     const { nombre, notas, moneda } = req.body;
     try {
         const sim = await prisma.simulacionLiquidacion.update({
-            where: { id },
+            where: { id: id as string },
             data: { nombre, notas, moneda },
             include: SIMULACION_INCLUDE
         });
@@ -135,7 +135,7 @@ export const updateSimulacion = async (req: AuthRequest, res: Response) => {
 export const deleteSimulacion = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     try {
-        await prisma.simulacionLiquidacion.delete({ where: { id } });
+        await prisma.simulacionLiquidacion.delete({ where: { id: id as string } });
         res.json({ ok: true });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -198,7 +198,7 @@ export const addEscenario = async (req: AuthRequest, res: Response) => {
         }
 
         const escenario = await prisma.simulacionEscenario.create({
-            data: { simulacionId: id, nombre, ...baseData },
+            data: { simulacionId: id as string, nombre, ...baseData },
             include: { categorias: true, deducciones: true, gastos: true, repartos: true }
         });
         res.status(201).json(escenario);
@@ -226,14 +226,14 @@ export const upsertEscenario = async (req: AuthRequest, res: Response) => {
     try {
         // Delete all children first, then recreate
         await prisma.$transaction([
-            prisma.simulacionCategoria.deleteMany({ where: { escenarioId } }),
-            prisma.simulacionGasto.deleteMany({ where: { escenarioId } }),
-            prisma.simulacionDeduccion.deleteMany({ where: { escenarioId } }),
-            prisma.simulacionReparto.deleteMany({ where: { escenarioId } }),
+            prisma.simulacionCategoria.deleteMany({ where: { escenarioId: escenarioId as string } }),
+            prisma.simulacionGasto.deleteMany({ where: { escenarioId: escenarioId as string } }),
+            prisma.simulacionDeduccion.deleteMany({ where: { escenarioId: escenarioId as string } }),
+            prisma.simulacionReparto.deleteMany({ where: { escenarioId: escenarioId as string } }),
         ]);
 
         const updated = await prisma.simulacionEscenario.update({
-            where: { id: escenarioId },
+            where: { id: escenarioId as string },
             data: {
                 nombre,
                 ocupacionPorcentaje,
@@ -292,12 +292,12 @@ export const deleteEscenario = async (req: AuthRequest, res: Response) => {
     const { escenarioId } = req.params;
     try {
         // Check at least 1 remains
-        const esc = await prisma.simulacionEscenario.findUnique({ where: { id: escenarioId } });
+        const esc = await prisma.simulacionEscenario.findUnique({ where: { id: escenarioId as string } });
         if (!esc) return res.status(404).json({ error: 'Escenario no encontrado' });
         const count = await prisma.simulacionEscenario.count({ where: { simulacionId: esc.simulacionId } });
         if (count <= 1) return res.status(400).json({ error: 'Debe quedar al menos un escenario' });
 
-        await prisma.simulacionEscenario.delete({ where: { id: escenarioId } });
+        await prisma.simulacionEscenario.delete({ where: { id: escenarioId as string } });
         res.json({ ok: true });
     } catch (e: any) {
         res.status(500).json({ error: e.message });

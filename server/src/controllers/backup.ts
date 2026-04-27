@@ -15,6 +15,9 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
         const filepath = path.join(BACKUP_DIR, filename);
 
         // Fetch all data from all 17 tables
+        const [
+            users, obras, funciones, logisticaRutas, checklists, 
+            documentos, liquidaciones, ventas, gastos, mensajes,
             obraDeducciones, artistaPayouts, invitados, 
             liquidacionGrupales, liquidacionGrupalItems,
             liquidacionItems, liquidacionRepartos,
