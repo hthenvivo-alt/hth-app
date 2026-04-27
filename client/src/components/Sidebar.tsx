@@ -9,7 +9,8 @@ import {
     Users,
     Settings,
     LogOut,
-    Lock
+    Lock,
+    FlaskConical
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Modal from './Modal';
@@ -42,6 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         navItems.splice(2, 0, { icon: Clapperboard, label: 'Obras', path: '/obras' });
         navItems.splice(3, 0, { icon: BarChart3, label: 'Reportes', path: '/reportes' });
         navItems.push({ icon: BarChart3, label: 'Liquidación', path: '/liquidacion' });
+        navItems.push({ icon: FlaskConical, label: 'Simulaciones', path: '/simulacion' });
         navItems.push({ icon: Users, label: 'Usuarios', path: '/usuarios' });
         navItems.push({ icon: Settings, label: 'Configuración', path: '/settings' });
     } else if (isProductor) {

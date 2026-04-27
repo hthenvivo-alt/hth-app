@@ -30,6 +30,7 @@ model User {
   mensajes             Mensaje[]
   obras                Obra[]           @relation("ProductorEjecutivo")
   obrasComoArtista     Obra[]           @relation("ArtistasEnObras")
+  simulaciones         SimulacionLiquidacion[]
 }
 
 model Obra {
@@ -51,6 +52,7 @@ model Obra {
   productorEjecutivo   User             @relation("ProductorEjecutivo", fields: [productorEjecutivoId], references: [id], onDelete: Cascade)
   deducciones          ObraDeduccion[]
   artistas             User[]           @relation("ArtistasEnObras")
+  simulaciones         SimulacionLiquidacion[]
 }
 
 model ObraDeduccion {
@@ -314,4 +316,73 @@ model LiquidacionReparto {
   created_at    DateTime    @default(now())
   aplicaAAA     Boolean     @default(true)
   liquidacion   Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+}
+
+model SimulacionLiquidacion {
+  id          String                @id @default(uuid())
+  nombre      String
+  obraId      String
+  moneda      String                @default("ARS")
+  notas       String?
+  createdById String
+  created_at  DateTime              @default(now())
+  updated_at  DateTime              @updatedAt
+  obra        Obra                  @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  createdBy   User                  @relation(fields: [createdById], references: [id])
+  escenarios  SimulacionEscenario[]
+}
+
+model SimulacionEscenario {
+  id                              String                @id @default(uuid())
+  simulacionId                    String
+  nombre                          String                @default("Escenario 1")
+  ocupacionPorcentaje             Decimal               @default(100) @db.Decimal(5, 2)
+  costoTarjetaPorcentaje          Decimal               @default(0) @db.Decimal(5, 2)
+  acuerdoPorcentaje               Decimal               @default(0) @db.Decimal(5, 2)
+  acuerdoSobre                    String                @default("Neta")
+  impuestoTransferenciaPorcentaje Decimal               @default(1.2) @db.Decimal(5, 2)
+  created_at                      DateTime              @default(now())
+  updated_at                      DateTime              @updatedAt
+  simulacion                      SimulacionLiquidacion @relation(fields: [simulacionId], references: [id], onDelete: Cascade)
+  categorias                      SimulacionCategoria[]
+  gastos                          SimulacionGasto[]
+  deducciones                     SimulacionDeduccion[]
+  repartos                        SimulacionReparto[]
+}
+
+model SimulacionCategoria {
+  id          String              @id @default(uuid())
+  escenarioId String
+  nombre      String
+  precio      Decimal             @db.Decimal(15, 2)
+  aforo       Int
+  escenario   SimulacionEscenario @relation(fields: [escenarioId], references: [id], onDelete: Cascade)
+}
+
+model SimulacionGasto {
+  id          String              @id @default(uuid())
+  escenarioId String
+  concepto    String
+  monto       Decimal             @db.Decimal(15, 2)
+  escenario   SimulacionEscenario @relation(fields: [escenarioId], references: [id], onDelete: Cascade)
+}
+
+model SimulacionDeduccion {
+  id                String              @id @default(uuid())
+  escenarioId       String
+  concepto          String
+  porcentaje        Decimal?            @db.Decimal(5, 2)
+  monto             Decimal?            @db.Decimal(15, 2)
+  deduceAntesDeSala Boolean             @default(true)
+  escenario         SimulacionEscenario @relation(fields: [escenarioId], references: [id], onDelete: Cascade)
+}
+
+model SimulacionReparto {
+  id            String              @id @default(uuid())
+  escenarioId   String
+  nombreArtista String
+  porcentaje    Decimal             @db.Decimal(5, 2)
+  base          String              @default("Utilidad")
+  aplicaAAA     Boolean             @default(true)
+  escenario     SimulacionEscenario @relation(fields: [escenarioId], references: [id], onDelete: Cascade)
 }

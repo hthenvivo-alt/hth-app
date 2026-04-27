@@ -15,12 +15,11 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
         const filepath = path.join(BACKUP_DIR, filename);
 
         // Fetch all data from all 17 tables
-        const [
-            users, obras, funciones, logisticaRutas, checklists, 
-            documentos, liquidaciones, ventas, gastos, mensajes,
             obraDeducciones, artistaPayouts, invitados, 
             liquidacionGrupales, liquidacionGrupalItems,
-            liquidacionItems, liquidacionRepartos
+            liquidacionItems, liquidacionRepartos,
+            simulaciones, escenarios, categorias,
+            simGastos, simDeducciones, simRepartos
         ] = await Promise.all([
             prisma.user.findMany(),
             prisma.obra.findMany(),
@@ -38,7 +37,13 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
             prisma.liquidacionGrupal.findMany(),
             prisma.liquidacionGrupalItem.findMany(),
             prisma.liquidacionItem.findMany(),
-            prisma.liquidacionReparto.findMany()
+            prisma.liquidacionReparto.findMany(),
+            prisma.simulacionLiquidacion.findMany(),
+            prisma.simulacionEscenario.findMany(),
+            prisma.simulacionCategoria.findMany(),
+            prisma.simulacionGasto.findMany(),
+            prisma.simulacionDeduccion.findMany(),
+            prisma.simulacionReparto.findMany()
         ]);
 
         const backupData = {
@@ -63,7 +68,13 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
                 liquidacionGrupals: liquidacionGrupales,
                 liquidacionGrupalItems,
                 liquidacionItems,
-                liquidacionRepartos
+                liquidacionRepartos,
+                simulaciones,
+                escenarios,
+                categorias,
+                simGastos,
+                simDeducciones,
+                simRepartos
             }
         };
 
@@ -232,6 +243,12 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
         await safeDelete('ObraDeduccion');
         await safeDelete('Funcion');
         await safeDelete('Obra');
+        await safeDelete('SimulacionReparto');
+        await safeDelete('SimulacionDeduccion');
+        await safeDelete('SimulacionGasto');
+        await safeDelete('SimulacionCategoria');
+        await safeDelete('SimulacionEscenario');
+        await safeDelete('SimulacionLiquidacion');
         await safeDelete('User');
 
         // 2. INSERT in dependency order
@@ -288,6 +305,24 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
         }
         if (data.liquidacionRepartos?.length) {
             await safeCreate('liquidacionRepartos', () => prisma.liquidacionReparto.createMany({ data: data.liquidacionRepartos }), data.liquidacionRepartos.length);
+        }
+        if (data.simulaciones?.length) {
+            await safeCreate('simulaciones', () => prisma.simulacionLiquidacion.createMany({ data: data.simulaciones }), data.simulaciones.length);
+        }
+        if (data.escenarios?.length) {
+            await safeCreate('escenarios', () => prisma.simulacionEscenario.createMany({ data: data.escenarios }), data.escenarios.length);
+        }
+        if (data.categorias?.length) {
+            await safeCreate('categorias', () => prisma.simulacionCategoria.createMany({ data: data.categorias }), data.categorias.length);
+        }
+        if (data.simGastos?.length) {
+            await safeCreate('simGastos', () => prisma.simulacionGasto.createMany({ data: data.simGastos }), data.simGastos.length);
+        }
+        if (data.simDeducciones?.length) {
+            await safeCreate('simDeducciones', () => prisma.simulacionDeduccion.createMany({ data: data.simDeducciones }), data.simDeducciones.length);
+        }
+        if (data.simRepartos?.length) {
+            await safeCreate('simRepartos', () => prisma.simulacionReparto.createMany({ data: data.simRepartos }), data.simRepartos.length);
         }
         // Documentos go LAST because they can reference liquidaciones, obras, and funciones
         if (data.documentos?.length) {

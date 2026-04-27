@@ -15,6 +15,8 @@ import LiquidacionDetalle from './pages/LiquidacionDetalle';
 import LiquidacionGrupalDetalle from './pages/LiquidacionGrupalDetalle';
 import Usuarios from './pages/Usuarios';
 import ArtistReports from './pages/ArtistReports';
+import SimulacionLiquidacion from './pages/SimulacionLiquidacion';
+import SimulacionDetalle from './pages/SimulacionDetalle';
 import Sidebar from './components/Sidebar';
 
 import MobileHeader from './components/MobileHeader';
@@ -56,6 +58,8 @@ const App: React.FC = () => {
             <Route path="/liquidacion/grupal/:id" element={(user?.rol === 'Administrador' || user?.rol === 'Admin') ? <LiquidacionGrupalDetalle /> : <Navigate to="/" />} />
             <Route path="/usuarios" element={(user?.rol === 'Administrador' || user?.rol === 'Admin') ? <Usuarios /> : <Navigate to="/" />} />
             <Route path="/settings" element={(user?.rol === 'Administrador' || user?.rol === 'Admin') ? <Settings /> : <Navigate to="/" />} />
+            <Route path="/simulacion" element={(user?.rol === 'Administrador' || user?.rol === 'Admin') ? <SimulacionLiquidacion /> : <Navigate to="/" />} />
+            <Route path="/simulacion/:id" element={(user?.rol === 'Administrador' || user?.rol === 'Admin') ? <SimulacionDetalle /> : <Navigate to="/" />} />
             {/* Add more routes here */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

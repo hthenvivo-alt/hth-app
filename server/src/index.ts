@@ -21,6 +21,7 @@ import backupRoutes from './routes/backup.js';
 import invitadosRoutes from './routes/invitados.js';
 import reportesRoutes from './routes/reportes.js';
 import agentRoutes from './routes/agent.js';
+import simulacionRoutes from './routes/simulacion.js';
 import { createBackup } from './controllers/backup.js';
 
 dotenv.config();
@@ -56,6 +57,7 @@ app.use('/backup', backupRoutes);
 app.use('/invitados', invitadosRoutes);
 app.use('/reportes', reportesRoutes);
 app.use('/agent', agentRoutes);
+app.use('/simulacion', simulacionRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

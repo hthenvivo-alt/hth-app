@@ -24,7 +24,10 @@ yarn-debug.log*
 yarn-error.log*
 
 # Database Backups
-*.sql
+backup.sql
+backups/
+*.zip
+!server/prisma/migrations/**/*.sql
 
 # IDEs
 .vscode/
