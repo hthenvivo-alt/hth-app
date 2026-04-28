@@ -100,6 +100,8 @@ model Funcion {
   userVentaTicketera        String?
   vendidas                  Int              @default(0)
   confirmada                Boolean          @default(true)
+  acuerdoPorcentaje         Decimal?         @db.Decimal(5, 2)
+  acuerdoSobre              String?          @default("Neta")
   checklists                ChecklistTarea[]
   documentos                Documento[]
   obra                      Obra             @relation(fields: [obraId], references: [id], onDelete: Cascade)
@@ -341,6 +343,9 @@ model SimulacionEscenario {
   acuerdoPorcentaje               Decimal               @default(0) @db.Decimal(5, 2)
   acuerdoSobre                    String                @default("Neta")
   impuestoTransferenciaPorcentaje Decimal               @default(1.2) @db.Decimal(5, 2)
+  ingresoManual                   Boolean               @default(false)
+  ventaManualMonto                Decimal?              @db.Decimal(15, 2)
+  aforoManual                     Int?
   created_at                      DateTime              @default(now())
   updated_at                      DateTime              @updatedAt
   simulacion                      SimulacionLiquidacion @relation(fields: [simulacionId], references: [id], onDelete: Cascade)

@@ -28,6 +28,9 @@ interface Escenario {
     acuerdoPorcentaje: number;
     acuerdoSobre: 'Bruta' | 'Neta';
     impuestoTransferenciaPorcentaje: number;
+    ingresoManual: boolean;
+    ventaManualMonto: number | '' | null;
+    aforoManual: number | '' | null;
     categorias: Categoria[];
     gastos: Gasto[];
     deducciones: Deduccion[];
@@ -135,12 +138,17 @@ const SimulacionDetalle: React.FC = () => {
         const ocupacion = activeEscenario.ocupacionPorcentaje / 100;
         
         // Income
-        const aforoTotal = activeEscenario.categorias.reduce((acc, c) => acc + (Number(c.aforo) || 0), 0);
+        const aforoTotal = activeEscenario.ingresoManual 
+            ? (Number(activeEscenario.aforoManual) || 0)
+            : activeEscenario.categorias.reduce((acc, c) => acc + (Number(c.aforo) || 0), 0);
+            
         const vendidasTotal = Math.round(aforoTotal * ocupacion);
         
-        const recaudacionBrutaPotencial = activeEscenario.categorias.reduce((acc, c) => {
-            return acc + (Number(c.precio) || 0) * (Number(c.aforo) || 0);
-        }, 0);
+        const recaudacionBrutaPotencial = activeEscenario.ingresoManual
+            ? (Number(activeEscenario.ventaManualMonto) || 0)
+            : activeEscenario.categorias.reduce((acc, c) => {
+                return acc + (Number(c.precio) || 0) * (Number(c.aforo) || 0);
+            }, 0);
         
         const ventaTotal = recaudacionBrutaPotencial * ocupacion;
         const costoTarjetas = (ventaTotal * (activeEscenario.costoTarjetaPorcentaje || 0)) / 100;
@@ -207,10 +215,12 @@ const SimulacionDetalle: React.FC = () => {
         
         const breakEvenTickets = contributionMarginPerTicket > 0 ? Math.ceil(fixedCosts / contributionMarginPerTicket) : 0;
         const breakEvenOccupation = aforoTotal > 0 ? (breakEvenTickets / aforoTotal) * 100 : 0;
+        const breakEvenRevenue = (1 - totalVariableRate) > 0 ? fixedCosts / (1 - totalVariableRate) : 0;
 
         return {
             vendidasTotal,
             aforoTotal,
+            recaudacionBrutaPotencial,
             ventaTotal,
             costoTarjetas,
             recaudacionBrutaReal,
@@ -228,7 +238,8 @@ const SimulacionDetalle: React.FC = () => {
             totalRepartoArtistas,
             resultadoHTH,
             breakEvenTickets,
-            breakEvenOccupation
+            breakEvenOccupation,
+            breakEvenRevenue
         };
     }, [activeEscenario]);
 
@@ -306,24 +317,72 @@ const SimulacionDetalle: React.FC = () => {
                 {/* Left: Configuration */}
                 <div className="lg:col-span-2 space-y-8">
                     
-                    {/* 1. Categorías y Precios */}
+                    {/* 1. Categorías y Precios / Ingreso Manual */}
                     <section className="bg-[#121212] border border-white/5 rounded-2xl p-6">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-bold flex items-center gap-2">
-                                <DollarSign size={20} className="text-violet-400" /> Categorías de Entradas
+                                <DollarSign size={20} className="text-violet-400" /> Ingreso de Entradas
                             </h3>
-                            <button 
-                                onClick={() => updateEscenario(esc => ({
-                                    ...esc, 
-                                    categorias: [...esc.categorias, { nombre: 'Nueva Categoría', precio: '', aforo: '' }]
-                                }))}
-                                className="text-[10px] font-black uppercase tracking-widest text-violet-400 hover:text-white transition-colors"
-                            >
-                                + Agregar Categoría
-                            </button>
+                            <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
+                                <button 
+                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${!activeEscenario.ingresoManual ? 'bg-violet-500/20 text-violet-300' : 'text-gray-500 hover:text-white'}`}
+                                    onClick={() => updateEscenario(esc => ({ ...esc, ingresoManual: false }))}
+                                >
+                                    Por Categorías
+                                </button>
+                                <button 
+                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${activeEscenario.ingresoManual ? 'bg-violet-500/20 text-violet-300' : 'text-gray-500 hover:text-white'}`}
+                                    onClick={() => updateEscenario(esc => ({ 
+                                        ...esc, 
+                                        ingresoManual: true,
+                                        ventaManualMonto: esc.ventaManualMonto || calculations?.recaudacionBrutaPotencial || '',
+                                        aforoManual: esc.aforoManual || calculations?.aforoTotal || ''
+                                    }))}
+                                >
+                                    Monto Manual
+                                </button>
+                            </div>
                         </div>
-                        
-                        <div className="space-y-3">
+
+                        {activeEscenario.ingresoManual ? (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Venta Total Proyectada ({symbol})</label>
+                                    <input 
+                                        type="number" 
+                                        value={activeEscenario.ventaManualMonto || ''}
+                                        onChange={e => updateEscenario(esc => ({ ...esc, ventaManualMonto: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-lg font-bold focus:border-violet-500 outline-none"
+                                        placeholder="Ej: 5000000"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">Monto base (luego se aplica ocupación).</p>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Capacidad Sala (Aforo)</label>
+                                    <input 
+                                        type="number" 
+                                        value={activeEscenario.aforoManual || ''}
+                                        onChange={e => updateEscenario(esc => ({ ...esc, aforoManual: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-lg font-bold focus:border-violet-500 outline-none"
+                                        placeholder="Ej: 500"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">Para calcular Precio Promedio y Equilibrio.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex justify-end mb-4">
+                                    <button 
+                                        onClick={() => updateEscenario(esc => ({
+                                            ...esc, 
+                                            categorias: [...esc.categorias, { nombre: 'Nueva Categoría', precio: '', aforo: '' }]
+                                        }))}
+                                        className="text-[10px] font-black uppercase tracking-widest text-violet-400 hover:text-white transition-colors"
+                                    >
+                                        + Agregar Categoría
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
                             {activeEscenario.categorias.map((cat, idx) => (
                                 <div key={idx} className="flex gap-4 items-end">
                                     <div className="flex-[2]">
@@ -377,6 +436,8 @@ const SimulacionDetalle: React.FC = () => {
                                 </div>
                             ))}
                         </div>
+                        </>
+                        )}
 
                         {/* Ocupación Slider */}
                         <div className="mt-10 pt-8 border-t border-white/5">
@@ -679,10 +740,17 @@ const SimulacionDetalle: React.FC = () => {
                                 </div>
                             </div>
                             <div className="flex items-end justify-between">
-                                <div>
-                                    <span className="text-xl font-black text-white">{calculations?.breakEvenTickets}</span>
-                                    <span className="text-[10px] font-bold text-gray-500 ml-1 uppercase">Entradas</span>
-                                </div>
+                                {calculations?.breakEvenTickets !== undefined && calculations.breakEvenTickets > 0 ? (
+                                    <div>
+                                        <span className="text-xl font-black text-white">{calculations.breakEvenTickets}</span>
+                                        <span className="text-[10px] font-bold text-gray-500 ml-1 uppercase">Entradas</span>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <span className="text-xl font-black text-white">{symbol} {calculations?.breakEvenRevenue?.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                        <span className="text-[10px] font-bold text-gray-500 ml-1 uppercase">Venta</span>
+                                    </div>
+                                )}
                                 <div className="text-right">
                                     <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">{calculations?.breakEvenOccupation.toFixed(1)}% Ocupación</span>
                                 </div>

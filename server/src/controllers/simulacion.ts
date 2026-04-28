@@ -83,6 +83,9 @@ export const createSimulacion = async (req: AuthRequest, res: Response) => {
                         acuerdoPorcentaje: 0,
                         acuerdoSobre: 'Neta',
                         impuestoTransferenciaPorcentaje: moneda === 'ARS' ? 1.2 : 0,
+                        ingresoManual: false,
+                        ventaManualMonto: null,
+                        aforoManual: null,
                         categorias: {
                             create: [{ nombre: 'General', precio: 0, aforo: 0 }]
                         },
@@ -153,6 +156,9 @@ export const addEscenario = async (req: AuthRequest, res: Response) => {
             acuerdoPorcentaje: 0,
             acuerdoSobre: 'Neta',
             impuestoTransferenciaPorcentaje: 1.2,
+            ingresoManual: false,
+            ventaManualMonto: null,
+            aforoManual: null,
             categorias: { create: [{ nombre: 'General', precio: 0, aforo: 0 }] },
             deducciones: { create: [] },
             gastos: { create: [] },
@@ -171,6 +177,9 @@ export const addEscenario = async (req: AuthRequest, res: Response) => {
                     acuerdoPorcentaje: source.acuerdoPorcentaje,
                     acuerdoSobre: source.acuerdoSobre,
                     impuestoTransferenciaPorcentaje: source.impuestoTransferenciaPorcentaje,
+                    ingresoManual: source.ingresoManual,
+                    ventaManualMonto: source.ventaManualMonto,
+                    aforoManual: source.aforoManual,
                     categorias: {
                         create: source.categorias.map(c => ({ nombre: c.nombre, precio: Number(c.precio), aforo: c.aforo }))
                     },
@@ -217,6 +226,9 @@ export const upsertEscenario = async (req: AuthRequest, res: Response) => {
         acuerdoPorcentaje,
         acuerdoSobre,
         impuestoTransferenciaPorcentaje,
+        ingresoManual = false,
+        ventaManualMonto,
+        aforoManual,
         categorias = [],
         gastos = [],
         deducciones = [],
@@ -241,6 +253,9 @@ export const upsertEscenario = async (req: AuthRequest, res: Response) => {
                 acuerdoPorcentaje,
                 acuerdoSobre,
                 impuestoTransferenciaPorcentaje,
+                ingresoManual,
+                ventaManualMonto: ventaManualMonto !== undefined && ventaManualMonto !== null ? Number(ventaManualMonto) : null,
+                aforoManual: aforoManual !== undefined && aforoManual !== null ? Number(aforoManual) : null,
                 updated_at: new Date(),
                 categorias: {
                     create: categorias.map((c: any) => ({
