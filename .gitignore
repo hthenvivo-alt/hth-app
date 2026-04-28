@@ -32,3 +32,5 @@ backups/
 # IDEs
 .vscode/
 .idea/
+backup_db_before_commit_manual_sales_*.sql
+*.zip
