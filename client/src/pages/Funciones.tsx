@@ -21,8 +21,6 @@ import {
     Ticket,
     ChevronRight,
     RefreshCw,
-    ListTodo,
-    AlertTriangle,
     Users,
     Share2,
     Copy,
@@ -218,9 +216,12 @@ const Funciones: React.FC = () => {
                             >
                                 <td className="px-6 py-5">
                                     <div className="flex items-center space-x-4">
-                                        <div className="w-12 h-12 bg-white/5 rounded-xl flex flex-col items-center justify-center border border-white/10 group-hover:border-primary-500/30 transition-all">
-                                            <span className="text-[10px] uppercase font-bold text-gray-500">{func.fecha ? new Date(func.fecha).toLocaleString('es-AR', { month: 'short' }) : '-'}</span>
-                                            <span className="text-xl font-bold leading-none">{func.fecha ? new Date(func.fecha).getDate() : '-'}</span>
+                                        <div className="w-14 h-14 bg-white/5 rounded-xl flex flex-col items-center justify-center border border-white/10 group-hover:border-primary-500/30 transition-all shrink-0">
+                                            <span className="text-[9px] uppercase font-black tracking-widest text-primary-500 leading-tight">
+                                                {func.fecha ? new Date(func.fecha).toLocaleString('es-AR', { weekday: 'short' }).replace('.', '').toUpperCase() : '-'}
+                                            </span>
+                                            <span className="text-xl font-bold leading-tight">{func.fecha ? new Date(func.fecha).getDate() : '-'}</span>
+                                            <span className="text-[9px] uppercase font-bold text-gray-500 leading-tight">{func.fecha ? new Date(func.fecha).toLocaleString('es-AR', { month: 'short' }).replace('.', '').toUpperCase() : '-'}</span>
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -264,8 +265,9 @@ const Funciones: React.FC = () => {
                                                 <span className="text-gray-600 ml-1">/ {func.capacidadSala || '-'}</span>
                                             </div>
                                             {func.ultimaActualizacionVentas && (
-                                                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter mt-0.5 whitespace-nowrap">
-                                                    Act: {new Date(func.ultimaActualizacionVentas).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 bg-white/[0.04] border border-white/[0.07] rounded text-[10px] text-gray-400 font-medium whitespace-nowrap">
+                                                    <Clock size={9} className="text-gray-500 shrink-0" />
+                                                    {new Date(func.ultimaActualizacionVentas).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}hs
                                                 </span>
                                             )}
                                         </div>
@@ -317,26 +319,7 @@ const Funciones: React.FC = () => {
                                             onClick={(e) => e.stopPropagation()}
                                             title="Ver Hoja de Ruta"
                                         >
-                                            <div className="flex-shrink-0">
-                                                {func.checklistStats ? (
-                                                    (() => {
-                                                        const pendientes = func.checklistStats.total - func.checklistStats.completadas;
-                                                        return pendientes === 0 ? (
-                                                            <div className="flex items-center gap-1 px-3 py-1.5 text-green-500 bg-green-500/10 rounded-xl border border-green-500/20 min-w-[64px] justify-center" title="Checklist completa">
-                                                                <ListTodo size={13} className="shrink-0" />
-                                                                <span className="text-[10px] font-black uppercase tracking-wider leading-none">OK</span>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-1 px-3 py-1.5 text-amber-500 bg-amber-500/10 rounded-xl border border-amber-500/20 min-w-[64px] justify-center" title={`${pendientes} tareas pendientes`}>
-                                                                <AlertTriangle size={13} className="shrink-0" />
-                                                                <span className="text-[10px] font-black uppercase tracking-wider leading-none">{pendientes} PEND.</span>
-                                                            </div>
-                                                        );
-                                                    })()
-                                                ) : (
-                                                    <ChevronRight size={18} className="text-gray-500" />
-                                                )}
-                                            </div>
+                                            <ChevronRight size={18} className="text-gray-500" />
                                         </Link>
                                     </div>
                                 </td>
