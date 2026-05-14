@@ -724,7 +724,7 @@ export const saveAgentLiquidacion = async (req: AuthRequest, res: Response) => {
             await tx.funcion.update({
                 where: { id: funcionId },
                 data: {
-                    vendidas: Math.round(num(data.vendidas)),
+                    vendidas: Math.round(num(data.vendidas ?? data.entradasVendidas)),
                     ultimaFacturacionBruta: num(data.facturacionTotal),
                     ultimaActualizacionVentas: new Date()
                 }
