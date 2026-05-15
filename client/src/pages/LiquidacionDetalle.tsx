@@ -564,11 +564,7 @@ const LiquidacionDetalle: React.FC = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['liquidacion', funcionId] });
             queryClient.invalidateQueries({ queryKey: ['funciones-liquidacion'] });
-            if (fromGrupalId) {
-                navigate(`/liquidacion/grupal/${fromGrupalId}`);
-            } else {
-                navigate('/liquidacion');
-            }
+            alert('Liquidación guardada correctamente.');
         },
         onError: (error: any) => {
             console.error('Error saving liquidacion:', error);

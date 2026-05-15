@@ -214,18 +214,7 @@ export const updateAgentFuncion = async (req: AuthRequest, res: Response) => {
             include: { obra: { select: { nombre: true } } }
         }) as any;
 
-        try {
-            const dateStr = updatedFuncion.fecha.toLocaleDateString('es-AR', {
-                day: '2-digit', month: '2-digit',
-                timeZone: 'America/Argentina/Buenos_Aires'
-            });
-            await prisma.mensaje.create({
-                data: {
-                    contenido: `🤖 **Agente OpenClaw** actualizó la función:\n**${updatedFuncion.obra.nombre}** en ${updatedFuncion.salaNombre} (${updatedFuncion.ciudad}) para el día **${dateStr}**.`,
-                    autorId: req.user!.id,
-                }
-            });
-        } catch (e) { console.warn('Auto-billboard failed:', e); }
+
 
         res.json(updatedFuncion);
     } catch (error) {
