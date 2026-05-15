@@ -206,7 +206,7 @@ export const generateRoadmapPDF = async (funcion: any, logistica: any) => {
     doc.save(finalFileName);
 };
 
-export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos: any[] = [], comprobantes: any[] = []) => {
+export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos: any[] = [], comprobantes: any[] = [], gastosCaja: any[] = []) => {
     const doc = new jsPDF({ compress: true });
     const obraNombre = funcion.obra?.nombre || 'Liquidación';
     const d = new Date(funcion.fecha);
@@ -409,6 +409,50 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     });
 
 
+    // SECTION 5B: DETALLE DE GASTOS DE CAJA (REGISTRO)
+    if (gastosCaja && gastosCaja.length > 0) {
+        doc.addPage();
+        let gastosY = 25;
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+        doc.text('DETALLE DE GASTOS DE CAJA (REGISTRO)', 15, gastosY);
+        gastosY += 8;
+
+        const gastosRows = gastosCaja.map((g: any) => {
+            const fechaGasto = g.fechaGasto ? new Date(g.fechaGasto).toLocaleDateString('es-AR', {
+                day: '2-digit', month: '2-digit', year: '2-digit',
+                timeZone: 'America/Argentina/Buenos_Aires'
+            }) : '---';
+            return [
+                g.descripcion || '---',
+                g.tipoGasto || '---',
+                fechaGasto,
+                { content: fmt(Number(g.monto) || 0), styles: { halign: 'right' as const } }
+            ];
+        });
+
+        const totalGastosCaja = gastosCaja.reduce((acc: number, g: any) => acc + (Number(g.monto) || 0), 0);
+        gastosRows.push([
+            { content: 'TOTAL GASTOS DE CAJA', styles: { fontStyle: 'bold' as const }, colSpan: 3 },
+            '',
+            '',
+            { content: fmt(totalGastosCaja), styles: { fontStyle: 'bold' as const, halign: 'right' as const } }
+        ]);
+
+        autoTable(doc, {
+            startY: gastosY,
+            head: [['Descripción', 'Categoría', 'Fecha', 'Monto']],
+            body: gastosRows,
+            theme: 'grid',
+            styles: { cellPadding: 4, fontSize: 9 },
+            headStyles: { fillColor: [50, 50, 50], textColor: [255, 255, 255], fontStyle: 'bold' },
+            columnStyles: {
+                0: { cellWidth: 70 },
+                3: { halign: 'right' }
+            }
+        });
+    }
 
     // FOOTER HELPER
     const addFooter = (doc: jsPDF) => {

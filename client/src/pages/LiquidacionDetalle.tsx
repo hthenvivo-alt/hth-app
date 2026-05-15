@@ -599,7 +599,7 @@ const LiquidacionDetalle: React.FC = () => {
 
         const gastos = items.filter(i => i.tipo === 'Gasto');
 
-        generateLiquidacionPDF(funcion, liqData, gastos, comprobantes || []);
+        generateLiquidacionPDF(funcion, liqData, gastos, comprobantes || [], gastosRegistrados || []);
     };
 
     if (loadingFuncion || loadingLiq) return (
