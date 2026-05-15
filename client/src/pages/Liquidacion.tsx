@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { TrendingUp, DollarSign, Calendar, MapPin, ChevronRight, CheckCircle2, Clock, FileSpreadsheet, ChevronDown, Layers, Plus, Trash2 } from 'lucide-react';
+import { TrendingUp, DollarSign, Calendar, MapPin, ChevronRight, CheckCircle2, Clock, FileSpreadsheet, ChevronDown, Layers, Plus, Trash2, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { formatDate } from '../utils/dateUtils';
 
@@ -34,6 +34,7 @@ const Liquidacion: React.FC = () => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     });
     const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+    const [selectedObra, setSelectedObra] = React.useState<string>('all');
 
     const { data: funciones, isLoading, refetch } = useQuery<Funcion[]>({
         queryKey: ['funciones-liquidacion'],
@@ -86,11 +87,26 @@ const Liquidacion: React.FC = () => {
         setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
 
-    const activeFunciones = funciones?.filter(f => {
+    const availableObras = React.useMemo(() => {
+        if (!funciones) return [];
+        const obras = new Map<string, string>();
+        funciones.forEach(f => {
+            if (f.obra?.nombre) obras.set(f.obra.nombre, f.obra.nombre);
+        });
+        return Array.from(obras.values()).sort();
+    }, [funciones]);
+
+    const filteredFunciones = React.useMemo(() => {
+        if (!funciones) return [];
+        if (selectedObra === 'all') return funciones;
+        return funciones.filter(f => f.obra?.nombre === selectedObra);
+    }, [funciones, selectedObra]);
+
+    const activeFunciones = filteredFunciones.filter(f => {
         const isPast = new Date(f.fecha) < new Date();
         return isPast && !f.liquidacion?.confirmada;
-    }) || [];
-    const closedFunciones = funciones?.filter(f => f.liquidacion?.confirmada) || [];
+    });
+    const closedFunciones = filteredFunciones.filter(f => f.liquidacion?.confirmada);
 
     const availableMonths = React.useMemo(() => {
         if (!funciones) return [];
@@ -385,6 +401,22 @@ const Liquidacion: React.FC = () => {
                 <div className="flex items-center gap-3">
                     <Calendar size={20} className="text-primary-500" />
                     <h2 className="text-sm font-black uppercase tracking-[0.2em] text-gray-400">Funciones Individuales</h2>
+                    {availableObras.length > 1 && (
+                        <div className="flex items-center gap-2 ml-4">
+                            <Filter size={14} className="text-gray-500" />
+                            <select
+                                value={selectedObra}
+                                onChange={(e) => setSelectedObra(e.target.value)}
+                                className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-300 uppercase tracking-wide appearance-none cursor-pointer hover:border-primary-500/30 transition-colors outline-none pr-8"
+                                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23666\' stroke-width=\'2\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
+                            >
+                                <option value="all">Todas las obras</option>
+                                {availableObras.map(obra => (
+                                    <option key={obra} value={obra}>{obra}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
                 {selectedIds.length > 0 && (
                     <div className="flex items-center gap-3 animate-in fade-in zoom-in duration-300">
