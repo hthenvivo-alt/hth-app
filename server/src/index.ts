@@ -23,6 +23,7 @@ import reportesRoutes from './routes/reportes.js';
 import agentRoutes from './routes/agent.js';
 import simulacionRoutes from './routes/simulacion.js';
 import { createBackup } from './controllers/backup.js';
+import { downloadFromDrive } from './services/driveStorage.js';
 
 dotenv.config();
 
@@ -34,6 +35,28 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Proxy endpoint: serve files stored in Google Drive
+// URLs like /uploads/drive/<driveFileId> are fetched from Drive and streamed to the client
+app.get('/uploads/drive/:fileId', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        const { stream, mimeType, filename } = await downloadFromDrive(fileId);
+
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache 1 hour
+        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
+
+        stream.pipe(res);
+    } catch (error: any) {
+        console.error(`[Drive Proxy] Error serving file ${req.params.fileId}:`, error.message);
+        res.status(404).json({ error: 'File not found or inaccessible' });
+    }
+});
+
+// Legacy: serve local uploads (backward compatibility for old files)
 app.use('/uploads', (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');

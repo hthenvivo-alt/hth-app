@@ -423,7 +423,9 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     };
 
     // PAGE 2: BORDEREAUX IMAGE (Only if NOT PDF)
-    if (liqData.bordereauxImage && !liqData.bordereauxImage.toLowerCase().endsWith('.pdf')) {
+    // Drive paths like /uploads/drive/XXXX don't have extensions, so treat them as images
+    const bordereauxIsPdf = liqData.bordereauxImage && /\.pdf$/i.test(liqData.bordereauxImage);
+    if (liqData.bordereauxImage && !bordereauxIsPdf) {
         doc.addPage();
         doc.setFillColor(dark[0], dark[1], dark[2]);
         doc.rect(0, 0, 210, 20, 'F');
@@ -475,7 +477,13 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
             doc.setFontSize(10);
             doc.text(`COMPROBANTE: ${docEntry.nombreDocumento.toUpperCase()}`, 15, 13);
 
-            const isImage = /\.(jpg|jpeg|png|webp)$/i.test(docEntry.linkDrive);
+            // Detect images: known extensions OR Drive proxy paths (which serve correct content-type)
+            const isDrivePath = docEntry.linkDrive.startsWith('/uploads/drive/');
+            const isImageExt = /\.(jpg|jpeg|jfif|png|webp|gif)$/i.test(docEntry.linkDrive);
+            const isPdfExt = /\.pdf$/i.test(docEntry.linkDrive);
+            // Drive paths without extensions are treated as images (most comprobantes are images)
+            // Unless the document name ends in .pdf
+            const isImage = isImageExt || (isDrivePath && !isPdfExt && !/\.pdf$/i.test(docEntry.nombreDocumento));
 
             if (isImage) {
                 try {
@@ -529,7 +537,7 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     const finalFileName = `Liquidacion_${obraNombre.replace(/\s+/g, '_')}_${fechaStr.replace(/\//g, '-')}.pdf`;
 
     // PDF MERGE LOGIC FOR BORDEREAUX
-    if (liqData.bordereauxImage && liqData.bordereauxImage.toLowerCase().endsWith('.pdf')) {
+    if (bordereauxIsPdf) {
         try {
             const reportPdfBytes = doc.output('arraybuffer');
             const reportPdfDoc = await PDFDocument.load(reportPdfBytes);

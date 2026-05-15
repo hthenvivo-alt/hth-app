@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth.js';
 import fs from 'fs';
 import path from 'path';
 import archiver from 'archiver';
+import { uploadToDrive, deleteFromDrive } from '../services/driveStorage.js';
 
 export const getLiquidacionByFuncion = async (req: AuthRequest, res: Response) => {
     const funcionId = req.params.funcionId as string;
@@ -49,16 +50,27 @@ export const uploadBordereaux = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Primero debes guardar la liquidación (aunque sea como borrador) antes de subir el bordereaux.' });
         }
 
+        // Upload to Google Drive
+        const driveResult = await uploadToDrive(
+            file.buffer,
+            `bordereaux-${funcionId}${path.extname(file.originalname)}`,
+            file.mimetype
+        );
+
+        const bordereauxPath = driveResult.localPath || `/uploads/drive/${driveResult.driveFileId}`;
+
         const liquidacion = await prisma.liquidacion.update({
             where: { funcionId },
             data: {
-                bordereauxImage: `/uploads/bordereaux/${file.filename}`
+                bordereauxImage: bordereauxPath
             }
         });
+
+        console.log(`[Bordereaux] Uploaded to Drive: ${driveResult.driveFileId} for funcion ${funcionId}`);
         res.json(liquidacion);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error uploading bordereaux:', error);
-        res.status(500).json({ error: 'Error al subir la imagen' });
+        res.status(500).json({ error: `Error al subir la imagen: ${error.message}` });
     }
 };
 
@@ -288,7 +300,6 @@ export const uploadComprobantesFiles = async (req: AuthRequest, res: Response) =
     }
 
     try {
-        // Find existing liquidation or ensure it exists (we actually need it to link)
         // Check if liquidation exists for this function
         const liquidacion = await prisma.liquidacion.findUnique({
             where: { funcionId }
@@ -299,22 +310,30 @@ export const uploadComprobantesFiles = async (req: AuthRequest, res: Response) =
         }
 
         const documentos = await Promise.all(files.map(async (file) => {
+            // Upload to Google Drive
+            const driveResult = await uploadToDrive(
+                file.buffer,
+                file.originalname,
+                file.mimetype
+            );
+
             return prisma.documento.create({
                 data: {
                     nombreDocumento: file.originalname,
                     tipoDocumento: 'Comprobante',
-                    linkDrive: `/uploads/comprobantes/${file.filename}`, // Local storage path for now
-                    driveFileId: 'local', // Placeholder
+                    linkDrive: driveResult.localPath || `/uploads/drive/${driveResult.driveFileId}`,
+                    driveFileId: driveResult.driveFileId,
                     subidoPorId: userId,
                     liquidacionId: liquidacion.id
                 }
             });
         }));
 
+        console.log(`[Comprobantes] Uploaded ${documentos.length} files to Drive for funcion ${funcionId}`);
         res.json(documentos);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error uploading comprobantes:', error);
-        res.status(500).json({ error: 'Error al subir los comprobantes' });
+        res.status(500).json({ error: `Error al subir los comprobantes: ${error.message}` });
     }
 };
 

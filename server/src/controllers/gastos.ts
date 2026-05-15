@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import archiver from 'archiver';
 import { fileURLToPath } from 'url';
+import { uploadToDrive } from '../services/driveStorage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -117,12 +118,19 @@ export const uploadVoucher = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Gasto no encontrado' });
         }
 
+        // Upload to Google Drive
+        const driveResult = await uploadToDrive(
+            file.buffer,
+            file.originalname,
+            file.mimetype
+        );
+
         const documento = await prisma.documento.create({
             data: {
                 nombreDocumento: file.originalname,
                 tipoDocumento: 'Comprobante',
-                linkDrive: `/uploads/comprobantes/${file.filename}`,
-                driveFileId: 'local',
+                linkDrive: driveResult.localPath || `/uploads/drive/${driveResult.driveFileId}`,
+                driveFileId: driveResult.driveFileId,
                 subidoPorId: userId,
                 obraId: gasto.obraId,
                 funcionId: gasto.funcionId
@@ -139,10 +147,11 @@ export const uploadVoucher = async (req: AuthRequest, res: Response) => {
             }
         });
 
+        console.log(`[Voucher] Uploaded to Drive: ${driveResult.driveFileId} for gasto ${id}`);
         res.json(updatedGasto);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error uploading voucher:', error);
-        res.status(500).json({ error: 'Error al subir el comprobante' });
+        res.status(500).json({ error: `Error al subir el comprobante: ${error.message}` });
     }
 };
 

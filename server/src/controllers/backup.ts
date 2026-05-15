@@ -280,9 +280,7 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
         if (data.mensajes?.length) {
             await safeCreate('mensajes', () => prisma.mensaje.createMany({ data: data.mensajes }), data.mensajes.length);
         }
-        if (data.gastos?.length) {
-            await safeCreate('gastos', () => prisma.gasto.createMany({ data: data.gastos }), data.gastos.length);
-        }
+
         if (data.ventas?.length) {
             await safeCreate('ventas', () => prisma.venta.createMany({ data: data.ventas }), data.ventas.length);
         }
@@ -330,6 +328,11 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
         // Documentos go LAST because they can reference liquidaciones, obras, and funciones
         if (data.documentos?.length) {
             await safeCreate('documentos', () => prisma.documento.createMany({ data: data.documentos }), data.documentos.length);
+        }
+        
+        // Gastos referencian a Documentos (comprobanteDocumentoId), por lo que deben ir después de Documentos
+        if (data.gastos?.length) {
+            await safeCreate('gastos', () => prisma.gasto.createMany({ data: data.gastos }), data.gastos.length);
         }
 
 
