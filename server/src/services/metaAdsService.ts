@@ -17,6 +17,7 @@ export interface MetaAdSet {
     id: string;
     name: string;
     status: string;
+    effective_status?: string;
     insights?: MetaInsights;
 }
 
@@ -24,6 +25,7 @@ export interface MetaCampaign {
     id: string;
     name: string;
     status: string;
+    effective_status?: string;
     adsets: MetaAdSet[];
     insights?: MetaInsights;
 }
