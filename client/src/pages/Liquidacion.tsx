@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { TrendingUp, DollarSign, Calendar, MapPin, ChevronRight, CheckCircle2, Clock, FileSpreadsheet, ChevronDown, Layers, Plus, Trash2, Filter } from 'lucide-react';
+import { TrendingUp, DollarSign, Calendar, MapPin, ChevronRight, CheckCircle2, Clock, FileSpreadsheet, ChevronDown, Layers, Plus, X, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { formatDate } from '../utils/dateUtils';
 
@@ -369,12 +369,13 @@ const Liquidacion: React.FC = () => {
                                 onClick={() => navigate(`/liquidacion/grupal/${g.id}`)}
                                 className="bg-[#121212] border border-white/5 p-5 rounded-2xl hover:border-primary-500/30 transition-all cursor-pointer group relative overflow-hidden"
                             >
-                                <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="absolute top-0 right-0 p-3">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); if (window.confirm('¿Eliminar grupo?')) deleteBatchMutation.mutate(g.id); }}
-                                        className="p-1.5 text-gray-600 hover:text-red-500 bg-white/5 rounded-lg transition-colors"
+                                        className="p-1.5 text-gray-500 hover:text-red-400 bg-white/5 hover:bg-red-500/10 rounded-lg transition-all"
+                                        title="Eliminar Grupo"
                                     >
-                                        <Trash2 size={14} />
+                                        <X size={14} />
                                     </button>
                                 </div>
                                 <h3 className="font-bold text-white group-hover:text-primary-400 transition-colors uppercase tracking-tight">{g.nombre}</h3>

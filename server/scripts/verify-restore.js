@@ -1,6 +1,6 @@
 const email = 'admin@hth.com';
 const password = 'admin123';
-const backupFile = 'backup-2026-03-18T15-11-57-162Z.json';
+const backupFile = 'prod-backup-2026-05-19T20-55-24-741Z.json';
 
 async function verifyRestore() {
     try {

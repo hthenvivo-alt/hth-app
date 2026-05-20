@@ -18,8 +18,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import Billboard from '../components/Billboard';
 import OccupationGauge from '../components/OccupationGauge';
+import MetaCampaignAlerts from '../components/MetaCampaignAlerts';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -138,9 +138,11 @@ const Dashboard: React.FC = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 gap-12">
-                <Billboard />
-            </div>
+            {isAdmin && (
+                <div className="grid grid-cols-1 gap-12">
+                    <MetaCampaignAlerts />
+                </div>
+            )}
         </div>
     );
 };

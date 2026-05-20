@@ -10,7 +10,8 @@ import {
     Clapperboard,
     Layers,
     Clock,
-    TrendingUp
+    TrendingUp,
+    X
 } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 
@@ -203,9 +204,10 @@ const SimulacionLiquidacion: React.FC = () => {
                                             e.stopPropagation();
                                             if (confirm('¿Eliminar esta simulación?')) deleteMutation.mutate(sim.id);
                                         }}
-                                        className="p-1 text-gray-600 hover:text-red-400 bg-white/0 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                        className="p-1.5 text-gray-500 hover:text-red-400 bg-white/5 hover:bg-red-500/10 rounded-lg transition-all"
+                                        title="Eliminar Simulación"
                                     >
-                                        <Trash2 size={13} />
+                                        <X size={14} />
                                     </button>
                                 </div>
 

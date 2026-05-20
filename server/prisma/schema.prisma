@@ -44,6 +44,7 @@ model Obra {
   created_at           DateTime         @default(now())
   updated_at           DateTime         @updatedAt
   driveFolderId        String?
+  metaCampaignId       String?
   artistaPayouts       ArtistaPayout[]
   checklists           ChecklistTarea[]
   documentos           Documento[]
@@ -99,6 +100,7 @@ model Funcion {
   ultimaFacturacionBruta    Decimal?         @db.Decimal(15, 2)
   userVentaTicketera        String?
   vendidas                  Int              @default(0)
+  metaAdSetId               String?
   confirmada                Boolean          @default(true)
   acuerdoPorcentaje         Decimal?         @db.Decimal(5, 2)
   acuerdoSobre              String?          @default("Neta")

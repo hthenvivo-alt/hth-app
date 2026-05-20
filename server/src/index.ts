@@ -22,6 +22,7 @@ import invitadosRoutes from './routes/invitados.js';
 import reportesRoutes from './routes/reportes.js';
 import agentRoutes from './routes/agent.js';
 import simulacionRoutes from './routes/simulacion.js';
+import metaRoutes from './routes/meta.js';
 import { createBackup } from './controllers/backup.js';
 import { downloadFromDrive } from './services/driveStorage.js';
 
@@ -81,6 +82,7 @@ app.use('/invitados', invitadosRoutes);
 app.use('/reportes', reportesRoutes);
 app.use('/agent', agentRoutes);
 app.use('/simulacion', simulacionRoutes);
+app.use('/meta', metaRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
