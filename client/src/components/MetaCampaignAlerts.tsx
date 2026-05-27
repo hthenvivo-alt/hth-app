@@ -110,7 +110,6 @@ const MetaCampaignAlerts: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {functionsWithAds.map((alert) => {
                                 const insights30d = alert.insights?.last_30d || {};
-                                const insights7d = alert.insights?.last_7d || {};
 
                                 return (
                                     <div key={alert.funcionId} className="bg-[#121212] border border-white/5 rounded-2xl p-5 hover:border-blue-500/30 transition-all group">
@@ -149,24 +148,6 @@ const MetaCampaignAlerts: React.FC = () => {
                                                         <p className="text-sm font-bold text-white">
                                                             {insights30d.inline_link_clicks || '0'} 
                                                             <span className="text-blue-400 text-xs ml-1">({parseFloat(insights30d.inline_link_click_ctr || '0').toFixed(2)}%)</span>
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Métricas 7D */}
-                                            <div className="bg-white/5 p-3 rounded-xl">
-                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Últimos 7 días</p>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <div>
-                                                        <p className="text-xs text-gray-400 flex items-center gap-1"><DollarSign size={12}/> Gasto</p>
-                                                        <p className="text-sm font-bold text-white">{formatCurrency(insights7d.spend || '0')}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs text-gray-400 flex items-center gap-1"><MousePointerClick size={12}/> Clics (CTR)</p>
-                                                        <p className="text-sm font-bold text-white">
-                                                            {insights7d.inline_link_clicks || '0'}
-                                                            <span className="text-blue-400 text-xs ml-1">({parseFloat(insights7d.inline_link_click_ctr || '0').toFixed(2)}%)</span>
                                                         </p>
                                                     </div>
                                                 </div>

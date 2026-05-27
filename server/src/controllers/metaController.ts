@@ -85,7 +85,6 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
             if (matchedCampaign && matchedAdSets.length > 0) {
                 return Promise.all(matchedAdSets.map(async (adset) => {
                     const insights30d = await getInsights(adset.id, 'adset', 'last_30d');
-                    const insights7d = await getInsights(adset.id, 'adset', 'last_7d');
                     return {
                         funcionId: `${funcion.id}-${adset.id}`,
                         obraNombre: funcion.obra.nombre,
@@ -96,17 +95,15 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
                         adSet: { id: adset.id, name: adset.name, status: adset.status },
                         insights: {
                             last_30d: insights30d,
-                            last_7d: insights7d
+                            last_7d: null
                         }
                     };
                 }));
             } else {
                 let insights30d = null;
-                let insights7d = null;
 
                 if (matchedCampaign) {
                     insights30d = await getInsights(matchedCampaign.id, 'campaign', 'last_30d');
-                    insights7d = await getInsights(matchedCampaign.id, 'campaign', 'last_7d');
                 }
 
                 return [{
@@ -119,7 +116,7 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
                     adSet: null,
                     insights: {
                         last_30d: insights30d,
-                        last_7d: insights7d
+                        last_7d: null
                     }
                 }];
             }
