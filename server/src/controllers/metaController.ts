@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
-import { getCampaignsWithAdSets, getAdSetsForCampaign, getInsights, MetaCampaign } from '../services/metaAdsService.js';
+import { getCampaignsWithAdSets, getAdSetsForCampaign, getInsights, MetaCampaign, MetaAdSet } from '../services/metaAdsService.js';
 
 export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
     try {
@@ -35,7 +35,7 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
 
         const results = await Promise.all(funciones.map(async (funcion) => {
             let matchedCampaign = null;
-            let matchedAdSet = null;
+            let matchedAdSets: MetaAdSet[] = [];
 
             // Auto-match Logic
             if (funcion.obra.metaCampaignId) {
@@ -43,10 +43,10 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
                 if (matchedCampaign) {
                     matchedCampaign.adsets = await getAdSetsForCampaign(matchedCampaign.id);
                     if (funcion.metaAdSetId) {
-                        matchedAdSet = matchedCampaign.adsets.find(a => a.id === funcion.metaAdSetId) || null;
+                        matchedAdSets = matchedCampaign.adsets.filter(a => a.id === funcion.metaAdSetId);
                     } else {
                         const cityName = normalize(funcion.ciudad);
-                        matchedAdSet = matchedCampaign.adsets.find(a => normalize(a.name).includes(cityName)) || null;
+                        matchedAdSets = matchedCampaign.adsets.filter(a => normalize(a.name).includes(cityName));
                     }
                 }
             } else {
@@ -67,10 +67,10 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
                     // Look for the specific Ad Set in ALL possible campaigns
                     for (const camp of possibleCampaigns) {
                         camp.adsets = await getAdSetsForCampaign(camp.id);
-                        const foundAdSet = camp.adsets.find(a => normalize(a.name).includes(cityName));
-                        if (foundAdSet) {
+                        const foundAdSets = camp.adsets.filter(a => normalize(a.name).includes(cityName));
+                        if (foundAdSets.length > 0) {
                             matchedCampaign = camp;
-                            matchedAdSet = foundAdSet;
+                            matchedAdSets = foundAdSets;
                             break;
                         }
                     }
@@ -85,10 +85,25 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
             // Fetch Insights if matched
             let insights30d = null;
             let insights7d = null;
+            let adSetsWithInsights: any[] = [];
 
-            if (matchedAdSet) {
-                insights30d = await getInsights(matchedAdSet.id, 'adset', 'last_30d');
-                insights7d = await getInsights(matchedAdSet.id, 'adset', 'last_7d');
+            if (matchedAdSets.length > 0) {
+                adSetsWithInsights = await Promise.all(matchedAdSets.map(async (adset) => {
+                    const i30d = await getInsights(adset.id, 'adset', 'last_30d');
+                    const i7d = await getInsights(adset.id, 'adset', 'last_7d');
+                    return {
+                        id: adset.id,
+                        name: adset.name,
+                        status: adset.status,
+                        insights: {
+                            last_30d: i30d,
+                            last_7d: i7d
+                        }
+                    };
+                }));
+                // Keep backward compatibility for root insights / adSet
+                insights30d = adSetsWithInsights[0].insights.last_30d;
+                insights7d = adSetsWithInsights[0].insights.last_7d;
             } else if (matchedCampaign) {
                 // Fallback to campaign insights if no specific ad set matched
                 insights30d = await getInsights(matchedCampaign.id, 'campaign', 'last_30d');
@@ -100,9 +115,11 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
                 obraNombre: funcion.obra.nombre,
                 ciudad: funcion.ciudad,
                 fecha: funcion.fecha,
-                status: matchedCampaign ? (matchedAdSet ? 'OK' : 'NO_ADSET') : 'NO_CAMPAIGN',
+                status: matchedCampaign ? (matchedAdSets.length > 0 ? 'OK' : 'NO_ADSET') : 'NO_CAMPAIGN',
                 campaign: matchedCampaign ? { id: matchedCampaign.id, name: matchedCampaign.name, status: matchedCampaign.status } : null,
-                adSet: matchedAdSet ? { id: matchedAdSet.id, name: matchedAdSet.name, status: matchedAdSet.status } : null,
+                adSets: adSetsWithInsights,
+                // Backwards compatibility fields
+                adSet: matchedAdSets.length > 0 ? { id: matchedAdSets[0].id, name: matchedAdSets[0].name, status: matchedAdSets[0].status } : null,
                 insights: {
                     last_30d: insights30d,
                     last_7d: insights7d
