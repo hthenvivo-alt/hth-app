@@ -118,108 +118,59 @@ const MetaCampaignAlerts: React.FC = () => {
                                             <div>
                                                 <h4 className="text-white font-black">{alert.obraNombre}</h4>
                                                 <p className="text-blue-400 text-sm font-semibold">{alert.ciudad}</p>
+                                                {alert.adSet && (
+                                                    <p className="text-blue-400/80 text-xs font-bold uppercase tracking-wide mt-0.5">{alert.adSet.name}</p>
+                                                )}
                                                 <p className="text-gray-500 text-xs mt-1">{new Date(alert.fecha).toLocaleDateString('es-AR')}</p>
                                             </div>
-                                            <CheckCircle2 size={24} className="text-green-500" />
+                                            <div className="flex flex-col items-end gap-2">
+                                                <CheckCircle2 size={24} className="text-green-500" />
+                                                {alert.adSet && (
+                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase ${
+                                                        alert.adSet.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-gray-500/10 text-gray-400 border border-gray-500/10'
+                                                    }`}>
+                                                        {alert.adSet.status}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="space-y-4">
-                                            {alert.adSets && alert.adSets.length > 0 ? (
-                                                alert.adSets.map((adSet) => {
-                                                    const insights30d = adSet.insights?.last_30d || {};
-                                                    const insights7d = adSet.insights?.last_7d || {};
-
-                                                    return (
-                                                        <div key={adSet.id} className="border-t border-white/5 pt-4 first:border-t-0 first:pt-0 space-y-2">
-                                                            <div className="flex justify-between items-center px-1">
-                                                                <span className="text-xs font-bold text-blue-400 truncate max-w-[200px]" title={adSet.name}>
-                                                                    {adSet.name}
-                                                                </span>
-                                                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase ${
-                                                                    adSet.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-gray-500/10 text-gray-400 border border-gray-500/10'
-                                                                }`}>
-                                                                    {adSet.status}
-                                                                </span>
-                                                            </div>
-                                                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                                                {/* Métricas 30D */}
-                                                                <div className="bg-white/5 p-3 rounded-xl">
-                                                                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-2">Últimos 30 días</p>
-                                                                    <div className="grid grid-cols-2 gap-2">
-                                                                        <div>
-                                                                            <p className="text-[10px] text-gray-400 flex items-center gap-1"><DollarSign size={10}/> Gasto</p>
-                                                                            <p className="text-xs font-bold text-white">{formatCurrency(insights30d.spend || '0')}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <p className="text-[10px] text-gray-400 flex items-center gap-1"><MousePointerClick size={10}/> Clics (CTR)</p>
-                                                                            <p className="text-xs font-bold text-white">
-                                                                                {insights30d.inline_link_clicks || '0'} 
-                                                                                <span className="text-blue-400 text-[10px] ml-1">({parseFloat(insights30d.inline_link_click_ctr || '0').toFixed(2)}%)</span>
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Métricas 7D */}
-                                                                <div className="bg-white/5 p-3 rounded-xl">
-                                                                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-2">Últimos 7 días</p>
-                                                                    <div className="grid grid-cols-2 gap-2">
-                                                                        <div>
-                                                                            <p className="text-[10px] text-gray-400">Gasto</p>
-                                                                            <p className="text-xs font-bold text-white">{formatCurrency(insights7d.spend || '0')}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <p className="text-[10px] text-gray-400">Clics (CTR)</p>
-                                                                            <p className="text-xs font-bold text-white">
-                                                                                {insights7d.inline_link_clicks || '0'}
-                                                                                <span className="text-blue-400 text-[10px] ml-1">({parseFloat(insights7d.inline_link_click_ctr || '0').toFixed(2)}%)</span>
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })
-                                            ) : (
-                                                <>
-                                                    {/* Métricas 30D */}
-                                                    <div className="bg-white/5 p-3 rounded-xl">
-                                                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Últimos 30 días</p>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <div>
-                                                                <p className="text-xs text-gray-400 flex items-center gap-1"><DollarSign size={12}/> Gasto</p>
-                                                                <p className="text-sm font-bold text-white">{formatCurrency(insights30d.spend || '0')}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-gray-400 flex items-center gap-1"><MousePointerClick size={12}/> Clics (CTR)</p>
-                                                                <p className="text-sm font-bold text-white">
-                                                                    {insights30d.inline_link_clicks || '0'} 
-                                                                    <span className="text-blue-400 text-xs ml-1">({parseFloat(insights30d.inline_link_click_ctr || '0').toFixed(2)}%)</span>
-                                                                </p>
-                                                            </div>
-                                                        </div>
+                                            {/* Métricas 30D */}
+                                            <div className="bg-white/5 p-3 rounded-xl">
+                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Últimos 30 días</p>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 flex items-center gap-1"><DollarSign size={12}/> Gasto</p>
+                                                        <p className="text-sm font-bold text-white">{formatCurrency(insights30d.spend || '0')}</p>
                                                     </div>
-
-                                                    {/* Métricas 7D */}
-                                                    <div className="bg-white/5 p-3 rounded-xl">
-                                                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Últimos 7 días</p>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <div>
-                                                                <p className="text-xs text-gray-400">Gasto</p>
-                                                                <p className="text-sm font-bold text-white">{formatCurrency(insights7d.spend || '0')}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs text-gray-400">Clics (CTR)</p>
-                                                                <p className="text-sm font-bold text-white">
-                                                                    {insights7d.inline_link_clicks || '0'}
-                                                                    <span className="text-blue-400 text-xs ml-1">({parseFloat(insights7d.inline_link_click_ctr || '0').toFixed(2)}%)</span>
-                                                                </p>
-                                                            </div>
-                                                        </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 flex items-center gap-1"><MousePointerClick size={12}/> Clics (CTR)</p>
+                                                        <p className="text-sm font-bold text-white">
+                                                            {insights30d.inline_link_clicks || '0'} 
+                                                            <span className="text-blue-400 text-xs ml-1">({parseFloat(insights30d.inline_link_click_ctr || '0').toFixed(2)}%)</span>
+                                                        </p>
                                                     </div>
-                                                </>
-                                            )}
+                                                </div>
+                                            </div>
+
+                                            {/* Métricas 7D */}
+                                            <div className="bg-white/5 p-3 rounded-xl">
+                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Últimos 7 días</p>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 flex items-center gap-1"><DollarSign size={12}/> Gasto</p>
+                                                        <p className="text-sm font-bold text-white">{formatCurrency(insights7d.spend || '0')}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-400 flex items-center gap-1"><MousePointerClick size={12}/> Clics (CTR)</p>
+                                                        <p className="text-sm font-bold text-white">
+                                                            {insights7d.inline_link_clicks || '0'}
+                                                            <span className="text-blue-400 text-xs ml-1">({parseFloat(insights7d.inline_link_click_ctr || '0').toFixed(2)}%)</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 );

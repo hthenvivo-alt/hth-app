@@ -33,7 +33,7 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
         // 3. Match and Build the Response
         const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9\s]/g, " ").toLowerCase().trim().replace(/\s+/g, ' ');
 
-        const results = await Promise.all(funciones.map(async (funcion) => {
+        const resultsNested = await Promise.all(funciones.map(async (funcion) => {
             let matchedCampaign = null;
             let matchedAdSets: MetaAdSet[] = [];
 
@@ -82,51 +82,50 @@ export const getDashboardAlerts = async (req: AuthRequest, res: Response) => {
                 }
             }
 
-            // Fetch Insights if matched
-            let insights30d = null;
-            let insights7d = null;
-            let adSetsWithInsights: any[] = [];
-
-            if (matchedAdSets.length > 0) {
-                adSetsWithInsights = await Promise.all(matchedAdSets.map(async (adset) => {
-                    const i30d = await getInsights(adset.id, 'adset', 'last_30d');
-                    const i7d = await getInsights(adset.id, 'adset', 'last_7d');
+            if (matchedCampaign && matchedAdSets.length > 0) {
+                return Promise.all(matchedAdSets.map(async (adset) => {
+                    const insights30d = await getInsights(adset.id, 'adset', 'last_30d');
+                    const insights7d = await getInsights(adset.id, 'adset', 'last_7d');
                     return {
-                        id: adset.id,
-                        name: adset.name,
-                        status: adset.status,
+                        funcionId: `${funcion.id}-${adset.id}`,
+                        obraNombre: funcion.obra.nombre,
+                        ciudad: funcion.ciudad,
+                        fecha: funcion.fecha,
+                        status: 'OK' as const,
+                        campaign: { id: matchedCampaign.id, name: matchedCampaign.name, status: matchedCampaign.status },
+                        adSet: { id: adset.id, name: adset.name, status: adset.status },
                         insights: {
-                            last_30d: i30d,
-                            last_7d: i7d
+                            last_30d: insights30d,
+                            last_7d: insights7d
                         }
                     };
                 }));
-                // Keep backward compatibility for root insights / adSet
-                insights30d = adSetsWithInsights[0].insights.last_30d;
-                insights7d = adSetsWithInsights[0].insights.last_7d;
-            } else if (matchedCampaign) {
-                // Fallback to campaign insights if no specific ad set matched
-                insights30d = await getInsights(matchedCampaign.id, 'campaign', 'last_30d');
-                insights7d = await getInsights(matchedCampaign.id, 'campaign', 'last_7d');
-            }
+            } else {
+                let insights30d = null;
+                let insights7d = null;
 
-            return {
-                funcionId: funcion.id,
-                obraNombre: funcion.obra.nombre,
-                ciudad: funcion.ciudad,
-                fecha: funcion.fecha,
-                status: matchedCampaign ? (matchedAdSets.length > 0 ? 'OK' : 'NO_ADSET') : 'NO_CAMPAIGN',
-                campaign: matchedCampaign ? { id: matchedCampaign.id, name: matchedCampaign.name, status: matchedCampaign.status } : null,
-                adSets: adSetsWithInsights,
-                // Backwards compatibility fields
-                adSet: matchedAdSets.length > 0 ? { id: matchedAdSets[0].id, name: matchedAdSets[0].name, status: matchedAdSets[0].status } : null,
-                insights: {
-                    last_30d: insights30d,
-                    last_7d: insights7d
+                if (matchedCampaign) {
+                    insights30d = await getInsights(matchedCampaign.id, 'campaign', 'last_30d');
+                    insights7d = await getInsights(matchedCampaign.id, 'campaign', 'last_7d');
                 }
-            };
+
+                return [{
+                    funcionId: funcion.id,
+                    obraNombre: funcion.obra.nombre,
+                    ciudad: funcion.ciudad,
+                    fecha: funcion.fecha,
+                    status: matchedCampaign ? 'NO_ADSET' as const : 'NO_CAMPAIGN' as const,
+                    campaign: matchedCampaign ? { id: matchedCampaign.id, name: matchedCampaign.name, status: matchedCampaign.status } : null,
+                    adSet: null,
+                    insights: {
+                        last_30d: insights30d,
+                        last_7d: insights7d
+                    }
+                }];
+            }
         }));
 
+        const results = resultsNested.flat();
         res.json(results);
     } catch (error: any) {
         console.error('Error fetching Meta dashboard alerts:', error);
