@@ -229,10 +229,6 @@ const ProyectoForm: React.FC<ProyectoFormProps> = ({ obraId, initial, onClose, o
         
         // Clean empty dates
         const cleanDates = fechasTentativas.map(d => d.trim()).filter(Boolean);
-        if (cleanDates.length === 0) {
-            setError('Al menos una fecha tentativa es requerida');
-            return;
-        }
 
         setSaving(true); setError('');
         try {
@@ -737,7 +733,7 @@ const ProyectoCard: React.FC<ProyectoCardProps> = ({ proyecto, onEdit, onConfirm
                     </div>
 
                     {/* Tentative Dates list with Conflict indicator */}
-                    {tentativeDatesList.length > 0 && (
+                    {tentativeDatesList.length > 0 ? (
                         <div className="mt-2.5 space-y-1">
                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Fechas tentativas:</span>
                             <div className="flex flex-wrap gap-1.5">
@@ -773,6 +769,11 @@ const ProyectoCard: React.FC<ProyectoCardProps> = ({ proyecto, onEdit, onConfirm
                                     );
                                 })}
                             </div>
+                        </div>
+                    ) : (
+                        <div className="mt-2.5 flex items-center gap-1 text-[11px] text-gray-500 font-semibold italic">
+                            <Calendar size={11} className="shrink-0 text-gray-600" />
+                            <span>Sin fechas tentativas cargadas</span>
                         </div>
                     )}
 
