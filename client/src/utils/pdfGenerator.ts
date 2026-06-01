@@ -616,6 +616,7 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
 
 export const generateBatchLiquidacionPDF = async (data: any) => {
     const { grupal } = data;
+    const pdfsToMerge: { url: string; label: string }[] = [];
     const doc = new jsPDF({ compress: true });
     const symbol = grupal.moneda === 'ARS' ? '$' : (grupal.moneda === 'USD' ? 'U$D' : '€');
     const primary = [220, 38, 38];
@@ -991,6 +992,115 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
                 columnStyles: { 1: { halign: 'right' } }
             });
         }
+
+        // --- 7B) IMÁGENES DE BORDEREAUX Y COMPROBANTES DE LA FUNCIÓN ---
+        const bordereauxIsPdf = l.bordereauxImage && /\.pdf$/i.test(l.bordereauxImage);
+        if (l.bordereauxImage) {
+            if (bordereauxIsPdf) {
+                pdfsToMerge.push({
+                    url: `${getBackendBase()}${l.bordereauxImage}`,
+                    label: `Bordereaux PDF: ${l.funcion.obra.nombre} - ${new Date(l.funcion.fecha).toLocaleDateString('es-AR')}`
+                });
+            } else {
+                doc.addPage();
+                doc.setFillColor(dark[0], dark[1], dark[2]);
+                doc.rect(0, 0, 210, 20, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`BORDEREAUX: ${l.funcion.obra.nombre.toUpperCase()} - ${new Date(l.funcion.fecha).toLocaleDateString('es-AR')}`, 15, 13);
+
+                try {
+                    const imgUrl = `${getBackendBase()}${l.bordereauxImage}`;
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.src = imgUrl;
+
+                    await new Promise((resolve) => {
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                    });
+
+                    if (img.complete && img.naturalWidth > 0) {
+                        const targetWidth = 180;
+                        const targetHeight = (img.naturalHeight * targetWidth) / img.naturalWidth;
+                        const maxHeight = 240;
+                        let finalW = targetWidth;
+                        let finalH = targetHeight;
+
+                        if (finalH > maxHeight) {
+                            finalH = maxHeight;
+                            finalW = (img.naturalWidth * finalH) / img.naturalHeight;
+                        }
+
+                        const compressedData = compressImage(img);
+                        doc.addImage(compressedData, 'JPEG', (210 - finalW) / 2, 30, finalW, finalH);
+                    } else {
+                        doc.setTextColor(100, 100, 100);
+                        doc.text('No se pudo cargar la imagen del bordereaux.', 15, 40);
+                    }
+                } catch (e) {
+                    console.error('Error adding image to PDF:', e);
+                }
+            }
+        }
+
+        if (l.comprobantes && l.comprobantes.length > 0) {
+            for (const docEntry of l.comprobantes) {
+                const isDrivePath = docEntry.linkDrive.startsWith('/uploads/drive/');
+                const isImageExt = /\.(jpg|jpeg|jfif|png|webp|gif)$/i.test(docEntry.linkDrive);
+                const isPdfExt = /\.pdf$/i.test(docEntry.linkDrive) || /\.pdf$/i.test(docEntry.nombreDocumento);
+                const isImage = isImageExt || (isDrivePath && !isPdfExt);
+
+                if (isImage) {
+                    doc.addPage();
+                    doc.setFillColor(dark[0], dark[1], dark[2]);
+                    doc.rect(0, 0, 210, 20, 'F');
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(`COMPROBANTE FUNCIÓN: ${docEntry.nombreDocumento.toUpperCase()}`, 15, 13);
+
+                    try {
+                        const imgUrl = `${getBackendBase()}${docEntry.linkDrive}`;
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.src = imgUrl;
+
+                        await new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        });
+
+                        if (img.complete && img.naturalWidth > 0) {
+                            const imgWidth = 180;
+                            const imgHeight = (img.naturalHeight * imgWidth) / img.naturalWidth;
+                            const maxHeight = 240;
+                            let finalW = imgWidth;
+                            let finalH = imgHeight;
+
+                            if (finalH > maxHeight) {
+                                finalH = maxHeight;
+                                finalW = (img.naturalWidth * finalH) / img.naturalHeight;
+                            }
+
+                            const compressedData = compressImage(img);
+                            doc.addImage(compressedData, 'JPEG', (210 - finalW) / 2, 30, finalW, finalH);
+                        } else {
+                            doc.setTextColor(100, 100, 100);
+                            doc.text('No se pudo cargar la imagen del comprobante.', 15, 40);
+                        }
+                    } catch (e) {
+                        console.error('Error adding voucher image to PDF:', e);
+                    }
+                } else if (isPdfExt) {
+                    pdfsToMerge.push({
+                        url: `${getBackendBase()}${docEntry.linkDrive}`,
+                        label: `Comprobante PDF: ${docEntry.nombreDocumento}`
+                    });
+                }
+            }
+        }
     }
 
     // FOOTER
@@ -1003,5 +1113,41 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
         doc.text(`Página ${i} de ${pageCount}`, 180, 285);
     }
 
-    doc.save(`Liquidacion_Grupal_${grupal.nombre.replace(/\s+/g, '_')}.pdf`);
+    const finalFileName = `Liquidacion_Grupal_${grupal.nombre.replace(/\s+/g, '_')}.pdf`;
+
+    if (pdfsToMerge.length > 0) {
+        try {
+            const reportPdfBytes = doc.output('arraybuffer');
+            const mainPdfDoc = await PDFDocument.load(reportPdfBytes);
+
+            for (const item of pdfsToMerge) {
+                try {
+                    const response = await fetch(item.url);
+                    const bytes = await response.arrayBuffer();
+                    const externalPdfDoc = await PDFDocument.load(bytes);
+                    const copiedPages = await mainPdfDoc.copyPages(externalPdfDoc, externalPdfDoc.getPageIndices());
+                    copiedPages.forEach((page) => mainPdfDoc.addPage(page));
+                } catch (e) {
+                    console.error(`Error merging PDF ${item.label}:`, e);
+                }
+            }
+
+            const pdfBytes = await mainPdfDoc.save();
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = finalFileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error merging PDFs:', error);
+            alert('Error al fusionar comprobantes PDF. Se descargará solo el reporte consolidado.');
+            doc.save(finalFileName);
+        }
+    } else {
+        doc.save(finalFileName);
+    }
 };

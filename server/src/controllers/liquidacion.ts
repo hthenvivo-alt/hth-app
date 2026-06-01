@@ -617,6 +617,7 @@ export const getLiquidacionGrupal = async (req: AuthRequest, res: Response) => {
                         },
                         items: true,
                         repartos: true,
+                        comprobantes: true,
                     }
                 },
                 items: true
