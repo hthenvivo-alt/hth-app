@@ -145,14 +145,16 @@ const LiquidacionDetalle: React.FC = () => {
         if (existingLiquidacion && existingLiquidacion.id) {
             // Priority 1: Saved Data (Confirmed or existing Draft with data)
             const brute = Number(existingLiquidacion.facturacionTotal) || 0;
-            const sold = Number(funcion.vendidas) || 0; // vendidas is stored on funcion
+            // vendidas is stored on Funcion (not on Liquidacion)
+            // Use funcion.vendidas directly — even if it's 0, show it so the user can edit it
+            const sold = funcion.vendidas != null ? Number(funcion.vendidas) : '';
 
             // Special case: If it's a draft and has 0 revenue, but the function has monitoreo data, we might want to suggest it
             // However, to keep it simple and reliable: if we have a saved liquidacion, take its values.
             // UNLESS it's a fresh draft (0 revenue) and the function has data.
             if (!existingLiquidacion.confirmada && brute === 0 && Number(funcion.ultimaFacturacionBruta) > 0) {
                 setFacturacionTotal(Number(funcion.ultimaFacturacionBruta));
-                setVendidas(Number(funcion.vendidas));
+                setVendidas(funcion.vendidas != null ? Number(funcion.vendidas) : '');
             } else {
                 setFacturacionTotal(brute);
                 setVendidas(sold);
@@ -538,9 +540,10 @@ const LiquidacionDetalle: React.FC = () => {
 
     const saveMutation = useMutation({
         mutationFn: async (confirmada: boolean) => {
+            const vendidasVal = vendidas !== '' ? Math.round(Number(vendidas) || 0) : undefined;
             await api.post(`/liquidacion/${funcionId}`, {
                 facturacionTotal,
-                vendidas: Math.round(Number(vendidas) || 0),
+                ...(vendidasVal !== undefined ? { vendidas: vendidasVal } : {}),
                 costosVenta,
                 recaudacionBruta,
                 recaudacionNeta,

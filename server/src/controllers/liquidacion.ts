@@ -271,13 +271,19 @@ export const upsertLiquidacion = async (req: AuthRequest, res: Response) => {
             });
 
             // 3. Update the associated Funcion with sales data
+            // Only update 'vendidas' if an explicit value was provided in the request body
+            // (avoids overwriting with 0 when the field is missing or empty)
+            const rawVendidas = data.vendidas ?? data.entradasVendidas;
+            const vendidasUpdate: any = {
+                ultimaFacturacionBruta: num(data.facturacionTotal),
+                ultimaActualizacionVentas: new Date()
+            };
+            if (rawVendidas !== undefined && rawVendidas !== null && rawVendidas !== '') {
+                vendidasUpdate.vendidas = Math.round(Number(String(rawVendidas).replace(/\./g, '').replace(',', '.')) || 0);
+            }
             await tx.funcion.update({
                 where: { id: funcionId },
-                data: {
-                    vendidas: Math.round(num(data.vendidas ?? data.entradasVendidas)),
-                    ultimaFacturacionBruta: num(data.facturacionTotal),
-                    ultimaActualizacionVentas: new Date()
-                }
+                data: vendidasUpdate
             });
 
             return liquidacion;

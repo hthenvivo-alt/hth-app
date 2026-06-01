@@ -710,13 +710,18 @@ export const saveAgentLiquidacion = async (req: AuthRequest, res: Response) => {
             });
 
             // Update the Funcion with final sales count
+            // Only update 'vendidas' if an explicit value was provided in the request body
+            const rawVendidas = data.vendidas ?? data.entradasVendidas;
+            const vendidasUpdate: any = {
+                ultimaFacturacionBruta: num(data.facturacionTotal),
+                ultimaActualizacionVentas: new Date()
+            };
+            if (rawVendidas !== undefined && rawVendidas !== null && rawVendidas !== '') {
+                vendidasUpdate.vendidas = Math.round(Number(String(rawVendidas).replace(/\./g, '').replace(',', '.')) || 0);
+            }
             await tx.funcion.update({
                 where: { id: funcionId },
-                data: {
-                    vendidas: Math.round(num(data.vendidas ?? data.entradasVendidas)),
-                    ultimaFacturacionBruta: num(data.facturacionTotal),
-                    ultimaActualizacionVentas: new Date()
-                }
+                data: vendidasUpdate
             });
 
             return liquidacion;
