@@ -177,6 +177,7 @@ interface ProyectoFormProps {
 }
 
 const ProyectoForm: React.FC<ProyectoFormProps> = ({ obraId, initial, onClose, onSuccess, allFunciones, obras }) => {
+    const [formObraId, setFormObraId] = useState(obraId || initial?.obraId || '');
     const [ciudad, setCiudad] = useState(initial?.ciudad ?? '');
     const [pais, setPais] = useState(initial?.pais ?? 'Argentina');
     
@@ -225,6 +226,7 @@ const ProyectoForm: React.FC<ProyectoFormProps> = ({ obraId, initial, onClose, o
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formObraId) { setError('La obra es requerida'); return; }
         if (!ciudad.trim()) { setError('La ciudad es requerida'); return; }
         
         // Clean empty dates
@@ -233,9 +235,9 @@ const ProyectoForm: React.FC<ProyectoFormProps> = ({ obraId, initial, onClose, o
         setSaving(true); setError('');
         try {
             const body = {
-                obraId, ciudad, pais, estado, notas: notas || null,
+                obraId: formObraId, ciudad, pais, estado, notas: notas || null,
                 fechasTentativas: cleanDates,
-                fechaTentativa: cleanDates[0], // Duplicated for safety compatibility
+                fechaTentativa: cleanDates.length > 0 ? cleanDates[0] : null, // Duplicated for safety compatibility
                 salaNombre: salaNombre || null,
                 contactoNombre: contactoNombre || null,
                 contactoEmail: contactoEmail || null,
@@ -282,6 +284,22 @@ const ProyectoForm: React.FC<ProyectoFormProps> = ({ obraId, initial, onClose, o
                     <div>
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Datos básicos</p>
                         <div className="space-y-3">
+                            {!obraId && (
+                                <div>
+                                    <label className={labelClass}>Obra *</label>
+                                    <select
+                                        value={formObraId}
+                                        onChange={e => setFormObraId(e.target.value)}
+                                        className={inputClass + ' cursor-pointer'}
+                                        disabled={!!initial}
+                                    >
+                                        <option value="">Seleccionar obra...</option>
+                                        {obras.map(o => (
+                                            <option key={o.id} value={o.id}>{o.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelClass}>Ciudad *</label>
@@ -305,7 +323,7 @@ const ProyectoForm: React.FC<ProyectoFormProps> = ({ obraId, initial, onClose, o
                             
                             {/* Multiple Tentative Dates list */}
                             <div>
-                                <label className={labelClass}>Fechas Tentativas *</label>
+                                <label className={labelClass}>Fechas Tentativas</label>
                                 <div className="space-y-3">
                                     {fechasTentativas.map((fecha, idx) => {
                                         const conflicts = ciudad ? obtenerConflictosParaFecha(
@@ -886,6 +904,34 @@ const ProyectoCard: React.FC<ProyectoCardProps> = ({ proyecto, onEdit, onConfirm
     );
 };
 
+// Helper to extract the earliest tentative timestamp for sorting
+const getProyectoFechaTimestamp = (p: FechaProyecto): number => {
+    let dates: string[] = [];
+    if (p.fechasTentativas) {
+        try {
+            const parsed = JSON.parse(p.fechasTentativas);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                dates = parsed;
+            }
+        } catch (e) {}
+    }
+    if (dates.length === 0 && p.fechaTentativa) {
+        dates = [p.fechaTentativa];
+    }
+    if (dates.length === 0) return Infinity; // No dates = put at the end
+
+    const times = dates.map(d => new Date(d).getTime()).filter(t => !isNaN(t));
+    return times.length > 0 ? Math.min(...times) : Infinity;
+};
+
+// Helper to extract the earliest active project date for an Obra
+const getObraEarliestTimestamp = (o: ObraConProyectos): number => {
+    const active = o.prospectos.filter(p => p.estado !== 'confirmada' && p.estado !== 'descartada');
+    if (active.length === 0) return Infinity;
+    const times = active.map(getProyectoFechaTimestamp);
+    return Math.min(...times);
+};
+
 // ─────────────────────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────────────────────
@@ -893,12 +939,13 @@ const ProyectoCard: React.FC<ProyectoCardProps> = ({ proyecto, onEdit, onConfirm
 const Programacion: React.FC = () => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
-    const [selectedObraId, setSelectedObraId] = useState<string | null>(null);
+    const [selectedObraId, setSelectedObraId] = useState<string | null>('all'); // Consolidate view by default
     const [showForm, setShowForm] = useState(false);
     const [editingProyecto, setEditingProyecto] = useState<FechaProyecto | null>(null);
     const [confirmingProyecto, setConfirmingProyecto] = useState<FechaProyecto | null>(null);
     const [showArchived, setShowArchived] = useState(false);
     const [showConfirmed, setShowConfirmed] = useState(false); // Collapsible group for confirmed functions
+    const [showOnlyActiveObras, setShowOnlyActiveObras] = useState(false);
 
     const { data: obras = [], isLoading } = useQuery<ObraConProyectos[]>({
         queryKey: ['programacion'],
@@ -918,13 +965,6 @@ const Programacion: React.FC = () => {
     });
 
     const selectedObra = obras.find(o => o.id === selectedObraId);
-
-    // Auto-select first obra
-    React.useEffect(() => {
-        if (obras.length > 0 && !selectedObraId) {
-            setSelectedObraId(obras[0].id);
-        }
-    }, [obras, selectedObraId]);
 
     const updateEstadoMutation = useMutation({
         mutationFn: async ({ id, estado }: { id: string; estado: EstadoProyecto }) => {
@@ -966,13 +1006,20 @@ const Programacion: React.FC = () => {
     const activeProyectos = selectedObra?.prospectos.filter(p => p.estado !== 'confirmada' && p.estado !== 'descartada') ?? [];
     const archivedProyectos = selectedObra?.prospectos.filter(p => p.estado === 'confirmada' || p.estado === 'descartada') ?? [];
 
-    // Group active projects by estado order
+    // Group active projects by estado order (for kanban view)
     const estadoOrder: EstadoProyecto[] = ['oferta_enviada', 'negociando', 'en_contacto', 'idea'];
     const groupedActive = estadoOrder.map(e => ({
         estado: e,
         label: getEstado(e).label,
-        items: activeProyectos.filter(p => p.estado === e)
+        items: activeProyectos
+            .filter(p => p.estado === e)
+            .sort((a, b) => getProyectoFechaTimestamp(a) - getProyectoFechaTimestamp(b))
     })).filter(g => g.items.length > 0);
+
+    // Calculate total active projects across all obras
+    const totalActiveCount = obras.reduce((acc, o) => {
+        return acc + o.prospectos.filter(p => p.estado !== 'confirmada' && p.estado !== 'descartada').length;
+    }, 0);
 
     // Stats for sidebar badges
     const getObraStats = (obra: ObraConProyectos) => {
@@ -1006,7 +1053,48 @@ const Programacion: React.FC = () => {
                         <p className="text-gray-600 text-xs text-center py-8">No hay obras activas</p>
                     ) : (
                         <div className="space-y-1">
-                            {obras.map(obra => {
+                            {/* "Todos los proyectos" button */}
+                            <button
+                                onClick={() => setSelectedObraId('all')}
+                                className={`w-full text-left p-3.5 rounded-xl transition-all ${
+                                    selectedObraId === 'all'
+                                        ? 'bg-primary-500/15 border border-primary-500/25'
+                                        : 'hover:bg-white/[0.04] border border-transparent'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <p className={`font-bold text-sm ${selectedObraId === 'all' ? 'text-white' : 'text-gray-300'}`}>
+                                        Todos los proyectos
+                                    </p>
+                                    {totalActiveCount > 0 && (
+                                        <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] font-bold rounded border border-amber-500/20">
+                                            {totalActiveCount} activos
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-0.5 font-medium">Vista consolidada de negociación</p>
+                            </button>
+
+                            {/* Separator */}
+                            <div className="h-px bg-white/5 my-2" />
+
+                            {/* Filter Active Obras checkbox */}
+                            <div className="flex items-center justify-between px-3.5 py-2 mb-2 bg-white/[0.02] border border-white/5 rounded-xl">
+                                <label htmlFor="active-filter" className="text-xs text-gray-400 font-semibold cursor-pointer select-none">
+                                    Solo obras activas
+                                </label>
+                                <input
+                                    id="active-filter"
+                                    type="checkbox"
+                                    checked={showOnlyActiveObras}
+                                    onChange={e => setShowOnlyActiveObras(e.target.checked)}
+                                    className="w-4 h-4 bg-[#0d0d0d] border border-white/10 rounded-lg accent-primary-500 cursor-pointer"
+                                />
+                            </div>
+
+                            {obras
+                                .filter(obra => !showOnlyActiveObras || obra.prospectos.some(p => p.estado !== 'confirmada' && p.estado !== 'descartada'))
+                                .map(obra => {
                                 const { active, confirmed } = getObraStats(obra);
                                 const isSelected = obra.id === selectedObraId;
                                 return (
@@ -1048,9 +1136,79 @@ const Programacion: React.FC = () => {
                 </div>
             </div>
 
-            {/* ── Main: Pipeline de la obra seleccionada ── */}
+            {/* ── Main: Pipeline de la obra seleccionada o Vista Consolidada ── */}
             <div className="flex-1 overflow-y-auto">
-                {!selectedObra ? (
+                {selectedObraId === 'all' ? (
+                    // ── VISTA GLOBAL CONSOLIDADA (PREDETERMINADA) ──
+                    <div className="p-6 max-w-3xl mx-auto">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h2 className="text-2xl font-bold">Todos los proyectos activos</h2>
+                                <p className="text-gray-500 text-sm">Vista consolidada de negociaciones agrupadas por obra</p>
+                            </div>
+                            <button
+                                onClick={() => { setEditingProyecto(null); setShowForm(true); }}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-primary-500/20"
+                            >
+                                <Plus size={16} /> Agregar proyecto
+                            </button>
+                        </div>
+
+                        {totalActiveCount === 0 ? (
+                            <div className="bg-[#121212] border border-white/5 rounded-2xl p-12 text-center">
+                                <CalendarRange size={40} className="mx-auto mb-3 text-gray-700" />
+                                <p className="text-gray-500 font-medium">No hay proyectos activos en el pipeline</p>
+                                <p className="text-gray-600 text-sm mt-1">Hacé clic en una obra en la barra lateral para agregar proyectos.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {obras
+                                    .filter(o => o.prospectos.some(p => p.estado !== 'confirmada' && p.estado !== 'descartada'))
+                                    .sort((a, b) => getObraEarliestTimestamp(a) - getObraEarliestTimestamp(b))
+                                    .map(o => {
+                                        const activeInObra = o.prospectos
+                                            .filter(p => p.estado !== 'confirmada' && p.estado !== 'descartada')
+                                            .sort((a, b) => getProyectoFechaTimestamp(a) - getProyectoFechaTimestamp(b));
+                                        return (
+                                            <div key={o.id} className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-4">
+                                                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                                                    <div>
+                                                        <h3
+                                                            onClick={() => setSelectedObraId(o.id)}
+                                                            className="font-bold text-base text-white hover:text-primary-400 transition-all cursor-pointer flex items-center gap-1.5 group"
+                                                        >
+                                                            {o.nombre}
+                                                            <ChevronRight size={14} className="text-gray-500 group-hover:text-primary-400 transition-all" />
+                                                        </h3>
+                                                        <p className="text-xs text-gray-500">{o.artistaPrincipal}</p>
+                                                    </div>
+                                                    <span className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] font-bold rounded-full border border-amber-500/20">
+                                                        {activeInObra.length} activos
+                                                    </span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {activeInObra.map(p => (
+                                                        <ProyectoCard
+                                                            key={p.id}
+                                                            proyecto={p}
+                                                            onEdit={p => { setEditingProyecto(p); setShowForm(true); }}
+                                                            onConfirmar={setConfirmingProyecto}
+                                                            onDescartar={handleDescartar}
+                                                            onDelete={handleDelete}
+                                                            onEstadoChange={(p, estado) => updateEstadoMutation.mutate({ id: p.id, estado })}
+                                                            allFunciones={allFunciones}
+                                                            obras={obras}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        )}
+                    </div>
+                ) : !selectedObra ? (
+                    // ── ESTADO INCOMPLETO/VACÍO ──
                     <div className="flex items-center justify-center h-full text-gray-600">
                         <div className="text-center">
                             <CalendarRange size={48} className="mx-auto mb-3 opacity-20" />
@@ -1058,6 +1216,7 @@ const Programacion: React.FC = () => {
                         </div>
                     </div>
                 ) : (
+                    // ── VISTA DETALLE KANBAN INDIVIDUAL POR OBRA ──
                     <div className="p-6 max-w-3xl mx-auto">
                         {/* Header obra */}
                         <div className="flex items-center justify-between mb-6">
@@ -1202,7 +1361,7 @@ const Programacion: React.FC = () => {
             {/* Slide-over form */}
             {showForm && selectedObraId && (
                 <ProyectoForm
-                    obraId={selectedObraId}
+                    obraId={selectedObraId === 'all' ? (editingProyecto?.obraId || '') : selectedObraId}
                     initial={editingProyecto}
                     onClose={() => { setShowForm(false); setEditingProyecto(null); }}
                     onSuccess={handleFormSuccess}
