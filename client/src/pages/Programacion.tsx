@@ -13,15 +13,16 @@ import {
 // Types
 // ─────────────────────────────────────────────────────────────
 
-type EstadoProspecto = 'idea' | 'en_contacto' | 'negociando' | 'oferta_enviada' | 'confirmada' | 'descartada';
+type EstadoProyecto = 'idea' | 'en_contacto' | 'negociando' | 'oferta_enviada' | 'confirmada' | 'descartada';
 type AcuerdoTipo = 'porcentaje' | 'monto_fijo' | '';
 
-interface FechaProspecto {
+interface FechaProyecto {
     id: string;
     obraId: string;
     ciudad: string;
     pais: string;
     fechaTentativa: string | null;
+    fechasTentativas: string | null; // Array JSON de fechas tentativas
     salaNombre: string | null;
     contactoNombre: string | null;
     contactoEmail: string | null;
@@ -30,7 +31,8 @@ interface FechaProspecto {
     acuerdoPorcentaje: number | null;
     acuerdoSobre: string | null;
     acuerdoMonto: number | null;
-    estado: EstadoProspecto;
+    estado: EstadoProyecto;
+    notes?: string | null;
     notas: string | null;
     funcionId: string | null;
     funcion?: { id: string; fecha: string; salaNombre: string | null; ciudad: string } | null;
@@ -44,20 +46,101 @@ interface FuncionConfirmada {
     pais: string;
 }
 
-interface ObraConProspectos {
+interface ObraConProyectos {
     id: string;
     nombre: string;
     artistaPrincipal: string;
     estado: string;
-    prospectos: FechaProspecto[];
+    prospectos: FechaProyecto[]; // Matches API response structure
     funciones: FuncionConfirmada[];
 }
+
+// ─────────────────────────────────────────────────────────────
+// Conflict Detection Utility
+// ─────────────────────────────────────────────────────────────
+
+const obtenerConflictosParaFecha = (
+    fechaStr: string, // format: "YYYY-MM-DD"
+    proyectoId: string | undefined,
+    ciudad: string,
+    salaNombre: string | undefined,
+    obraId: string,
+    allFunciones: any[],
+    obras: ObraConProyectos[]
+): string[] => {
+    if (!fechaStr) return [];
+    const targetDayStr = fechaStr.substring(0, 10);
+    const conflicts: string[] = [];
+
+    // 1. Check against confirmed functions
+    for (const f of allFunciones) {
+        if (!f.fecha) continue;
+        const fDayStr = f.fecha.substring(0, 10);
+        if (fDayStr === targetDayStr) {
+            // Check same Obra
+            if (f.obraId === obraId) {
+                conflicts.push(`La obra ya tiene una función confirmada este día.`);
+            }
+            // Check same Sala/Ciudad
+            if (
+                salaNombre && f.salaNombre &&
+                salaNombre.trim().toLowerCase() === f.salaNombre.trim().toLowerCase() &&
+                ciudad.trim().toLowerCase() === f.ciudad.trim().toLowerCase()
+            ) {
+                conflicts.push(`La sala "${f.salaNombre}" ya tiene una función confirmada este día.`);
+            }
+        }
+    }
+
+    // 2. Check against other active projects
+    for (const o of obras) {
+        if (!o.prospectos) continue;
+        for (const p of o.prospectos) {
+            // Skip current project
+            if (p.id === proyectoId) continue;
+            // Skip archived/inactive projects
+            if (p.estado === 'confirmada' || p.estado === 'descartada') continue;
+
+            // Parse dates of the active project
+            let dates: string[] = [];
+            if (p.fechasTentativas) {
+                try {
+                    const parsed = JSON.parse(p.fechasTentativas);
+                    if (Array.isArray(parsed)) dates = parsed;
+                } catch (e) { dates = []; }
+            }
+            if (dates.length === 0 && p.fechaTentativa) {
+                dates = [p.fechaTentativa];
+            }
+
+            for (const d of dates) {
+                const dDayStr = d.substring(0, 10);
+                if (dDayStr === targetDayStr) {
+                    // Check same Obra
+                    if (p.obraId === obraId) {
+                        conflicts.push(`Ya existe otro proyecto para esta obra este día (en ${p.ciudad}).`);
+                    }
+                    // Check same Sala/Ciudad
+                    if (
+                        salaNombre && p.salaNombre &&
+                        salaNombre.trim().toLowerCase() === p.salaNombre.trim().toLowerCase() &&
+                        ciudad.trim().toLowerCase() === p.ciudad.trim().toLowerCase()
+                    ) {
+                        conflicts.push(`Ya existe otro proyecto para la sala "${p.salaNombre}" este día.`);
+                    }
+                }
+            }
+        }
+    }
+
+    return Array.from(new Set(conflicts)); // Deduplicate
+};
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
 
-const ESTADOS: { value: EstadoProspecto; label: string; color: string; dot: string }[] = [
+const ESTADOS: { value: EstadoProyecto; label: string; color: string; dot: string }[] = [
     { value: 'idea',           label: 'Idea',           color: 'bg-gray-500/15 text-gray-400 border-gray-500/20',   dot: 'bg-gray-400' },
     { value: 'en_contacto',    label: 'En contacto',    color: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20', dot: 'bg-yellow-400' },
     { value: 'negociando',     label: 'Negociando',     color: 'bg-orange-500/15 text-orange-400 border-orange-500/20', dot: 'bg-orange-400' },
@@ -66,9 +149,9 @@ const ESTADOS: { value: EstadoProspecto; label: string; color: string; dot: stri
     { value: 'descartada',     label: 'Descartada',     color: 'bg-red-500/15 text-red-400 border-red-500/20',      dot: 'bg-red-400' },
 ];
 
-const getEstado = (v: EstadoProspecto) => ESTADOS.find(e => e.value === v) ?? ESTADOS[0];
+const getEstado = (v: EstadoProyecto) => ESTADOS.find(e => e.value === v) ?? ESTADOS[0];
 
-const formatAcuerdo = (p: FechaProspecto) => {
+const formatAcuerdo = (p: FechaProyecto) => {
     if (!p.acuerdoTipo) return null;
     if (p.acuerdoTipo === 'porcentaje' && p.acuerdoPorcentaje != null)
         return `${p.acuerdoPorcentaje}% sobre ${p.acuerdoSobre || 'Neta'}`;
@@ -81,22 +164,38 @@ const formatDateShort = (d: string) =>
     new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' });
 
 // ─────────────────────────────────────────────────────────────
-// ProspectoForm (slide-over form)
+// ProyectoForm (slide-over form)
 // ─────────────────────────────────────────────────────────────
 
-interface ProspectoFormProps {
+interface ProyectoFormProps {
     obraId: string;
-    initial?: FechaProspecto | null;
+    initial?: FechaProyecto | null;
     onClose: () => void;
     onSuccess: () => void;
+    allFunciones: any[];
+    obras: ObraConProyectos[];
 }
 
-const ProspectoForm: React.FC<ProspectoFormProps> = ({ obraId, initial, onClose, onSuccess }) => {
+const ProyectoForm: React.FC<ProyectoFormProps> = ({ obraId, initial, onClose, onSuccess, allFunciones, obras }) => {
     const [ciudad, setCiudad] = useState(initial?.ciudad ?? '');
     const [pais, setPais] = useState(initial?.pais ?? 'Argentina');
-    const [fechaTentativa, setFechaTentativa] = useState(
-        initial?.fechaTentativa ? initial.fechaTentativa.substring(0, 10) : ''
-    );
+    
+    // Manage multiple tentative dates
+    const [fechasTentativas, setFechasTentativas] = useState<string[]>(() => {
+        if (initial?.fechasTentativas) {
+            try {
+                const parsed = JSON.parse(initial.fechasTentativas);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed.map((d: string) => d.substring(0, 10));
+                }
+            } catch (e) {}
+        }
+        if (initial?.fechaTentativa) {
+            return [initial.fechaTentativa.substring(0, 10)];
+        }
+        return [''];
+    });
+
     const [salaNombre, setSalaNombre] = useState(initial?.salaNombre ?? '');
     const [contactoNombre, setContactoNombre] = useState(initial?.contactoNombre ?? '');
     const [contactoEmail, setContactoEmail] = useState(initial?.contactoEmail ?? '');
@@ -109,19 +208,38 @@ const ProspectoForm: React.FC<ProspectoFormProps> = ({ obraId, initial, onClose,
     const [acuerdoMonto, setAcuerdoMonto] = useState<string>(
         initial?.acuerdoMonto != null ? String(initial.acuerdoMonto) : ''
     );
-    const [estado, setEstado] = useState<EstadoProspecto>(initial?.estado ?? 'idea');
+    const [estado, setEstado] = useState<EstadoProyecto>(initial?.estado ?? 'idea');
     const [notas, setNotas] = useState(initial?.notas ?? '');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
+    // Autocomplete list processing
+    const uniqueCities = Array.from(new Set(allFunciones?.map((f: any) => f.ciudad))).filter(Boolean).sort();
+    const citySalaMap = allFunciones?.reduce((acc: any, f: any) => {
+        if (!f.ciudad || !f.salaNombre) return acc;
+        if (!acc[f.ciudad]) acc[f.ciudad] = new Set();
+        acc[f.ciudad].add(f.salaNombre);
+        return acc;
+    }, {}) || {};
+    const uniqueSalas = Array.from(new Set(allFunciones?.map((f: any) => f.salaNombre))).filter(Boolean).sort();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!ciudad.trim()) { setError('La ciudad es requerida'); return; }
+        
+        // Clean empty dates
+        const cleanDates = fechasTentativas.map(d => d.trim()).filter(Boolean);
+        if (cleanDates.length === 0) {
+            setError('Al menos una fecha tentativa es requerida');
+            return;
+        }
+
         setSaving(true); setError('');
         try {
             const body = {
                 obraId, ciudad, pais, estado, notas: notas || null,
-                fechaTentativa: fechaTentativa || null,
+                fechasTentativas: cleanDates,
+                fechaTentativa: cleanDates[0], // Duplicated for safety compatibility
                 salaNombre: salaNombre || null,
                 contactoNombre: contactoNombre || null,
                 contactoEmail: contactoEmail || null,
@@ -155,8 +273,8 @@ const ProspectoForm: React.FC<ProspectoFormProps> = ({ obraId, initial, onClose,
             >
                 <div className="p-6 border-b border-white/5 flex items-center justify-between">
                     <div>
-                        <h3 className="text-lg font-bold">{initial ? 'Editar Prospecto' : 'Nuevo Prospecto'}</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">Fecha candidata en pipeline de programación</p>
+                        <h3 className="text-lg font-bold">{initial ? 'Editar Proyecto' : 'Nuevo Proyecto'}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">Proyecto de fecha en pipeline de programación</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg text-gray-500 hover:text-white transition-all">
                         <X size={20} />
@@ -171,20 +289,87 @@ const ProspectoForm: React.FC<ProspectoFormProps> = ({ obraId, initial, onClose,
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className={labelClass}>Ciudad *</label>
-                                    <input value={ciudad} onChange={e => setCiudad(e.target.value)} className={inputClass} placeholder="Ej: Córdoba" />
+                                    <input
+                                        type="text"
+                                        list="proyecto-cities-list"
+                                        value={ciudad}
+                                        onChange={e => setCiudad(e.target.value)}
+                                        className={inputClass}
+                                        placeholder="Ej: Córdoba"
+                                    />
+                                    <datalist id="proyecto-cities-list">
+                                        {uniqueCities.map(city => <option key={city} value={city} />)}
+                                    </datalist>
                                 </div>
                                 <div>
                                     <label className={labelClass}>País</label>
                                     <input value={pais} onChange={e => setPais(e.target.value)} className={inputClass} placeholder="Argentina" />
                                 </div>
                             </div>
+                            
+                            {/* Multiple Tentative Dates list */}
                             <div>
-                                <label className={labelClass}>Fecha tentativa</label>
-                                <input type="date" value={fechaTentativa} onChange={e => setFechaTentativa(e.target.value)} className={inputClass} />
+                                <label className={labelClass}>Fechas Tentativas *</label>
+                                <div className="space-y-3">
+                                    {fechasTentativas.map((fecha, idx) => {
+                                        const conflicts = ciudad ? obtenerConflictosParaFecha(
+                                            fecha,
+                                            initial?.id,
+                                            ciudad,
+                                            salaNombre,
+                                            obraId,
+                                            allFunciones,
+                                            obras
+                                        ) : [];
+
+                                        return (
+                                            <div key={idx} className="space-y-1 bg-white/[0.02] border border-white/5 p-3 rounded-xl">
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="date"
+                                                        value={fecha}
+                                                        onChange={e => {
+                                                            const newFechas = [...fechasTentativas];
+                                                            newFechas[idx] = e.target.value;
+                                                            setFechasTentativas(newFechas);
+                                                        }}
+                                                        className={inputClass + " flex-1"}
+                                                    />
+                                                    {fechasTentativas.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFechasTentativas(fechasTentativas.filter((_, i) => i !== idx))}
+                                                            className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all border border-red-500/20"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {conflicts.length > 0 && (
+                                                    <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-2 rounded-lg mt-1 space-y-1">
+                                                        {conflicts.map((conf, ci) => (
+                                                            <p key={ci} className="flex items-start gap-1 font-semibold">
+                                                                ⚠️ {conf}
+                                                            </p>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setFechasTentativas([...fechasTentativas, ''])}
+                                    className="mt-3 w-full py-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 font-semibold text-xs transition-all flex items-center justify-center gap-1.5"
+                                >
+                                    <Plus size={14} /> Agregar otra fecha tentativa
+                                </button>
                             </div>
+
                             <div>
                                 <label className={labelClass}>Estado</label>
-                                <select value={estado} onChange={e => setEstado(e.target.value as EstadoProspecto)} className={inputClass + ' cursor-pointer'}>
+                                <select value={estado} onChange={e => setEstado(e.target.value as EstadoProyecto)} className={inputClass + ' cursor-pointer'}>
                                     {ESTADOS.filter(e => e.value !== 'confirmada').map(e => (
                                         <option key={e.value} value={e.value}>{e.label}</option>
                                     ))}
@@ -199,7 +384,20 @@ const ProspectoForm: React.FC<ProspectoFormProps> = ({ obraId, initial, onClose,
                         <div className="space-y-3">
                             <div>
                                 <label className={labelClass}>Nombre de la sala</label>
-                                <input value={salaNombre} onChange={e => setSalaNombre(e.target.value)} className={inputClass} placeholder="Ej: Teatro Gran Rex" />
+                                <input
+                                    type="text"
+                                    list="proyecto-salas-list"
+                                    value={salaNombre}
+                                    onChange={e => setSalaNombre(e.target.value)}
+                                    className={inputClass}
+                                    placeholder="Ej: Teatro Gran Rex"
+                                />
+                                <datalist id="proyecto-salas-list">
+                                    {(ciudad && citySalaMap[ciudad])
+                                        ? Array.from(citySalaMap[ciudad]).map((sala: any) => <option key={sala} value={sala} />)
+                                        : uniqueSalas.map(sala => <option key={sala as string} value={sala as string} />)
+                                    }
+                                </datalist>
                             </div>
                             <div>
                                 <label className={labelClass}>Contacto (nombre)</label>
@@ -318,7 +516,7 @@ const ProspectoForm: React.FC<ProspectoFormProps> = ({ obraId, initial, onClose,
                         </button>
                         <button type="submit" disabled={saving}
                             className="flex-1 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                            {saving ? 'Guardando...' : initial ? 'Guardar cambios' : 'Crear prospecto'}
+                            {saving ? 'Guardando...' : initial ? 'Guardar cambios' : 'Crear proyecto'}
                         </button>
                     </div>
                 </form>
@@ -332,28 +530,49 @@ const ProspectoForm: React.FC<ProspectoFormProps> = ({ obraId, initial, onClose,
 // ─────────────────────────────────────────────────────────────
 
 interface ConfirmarModalProps {
-    prospecto: FechaProspecto;
+    proyecto: FechaProyecto;
     onClose: () => void;
     onSuccess: (funcionId: string) => void;
+    allFunciones: any[];
 }
 
-const ConfirmarModal: React.FC<ConfirmarModalProps> = ({ prospecto, onClose, onSuccess }) => {
+const ConfirmarModal: React.FC<ConfirmarModalProps> = ({ proyecto, onClose, onSuccess, allFunciones }) => {
+    // Parse list of tentative dates to suggest
+    let tentativeDatesList: string[] = [];
+    if (proyecto.fechasTentativas) {
+        try {
+            const parsed = JSON.parse(proyecto.fechasTentativas);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                tentativeDatesList = parsed.map((d: string) => d.substring(0, 10));
+            }
+        } catch (e) {}
+    }
+    if (tentativeDatesList.length === 0 && proyecto.fechaTentativa) {
+        tentativeDatesList = [proyecto.fechaTentativa.substring(0, 10)];
+    }
+
     const [fecha, setFecha] = useState(
-        prospecto.fechaTentativa ? prospecto.fechaTentativa.substring(0, 10) : ''
+        tentativeDatesList.length > 0 ? tentativeDatesList[0] : ''
     );
     const [hora, setHora] = useState('21:00');
-    const [capacidadSala, setCapacidadSala] = useState('');
+    
+    // Auto-populate capacity from similar venue if available in history
+    const knownCapacity = proyecto.salaNombre
+        ? allFunciones?.find((f: any) => f.salaNombre?.trim().toLowerCase() === proyecto.salaNombre?.trim().toLowerCase() && f.capacidadSala)?.capacidadSala
+        : undefined;
+
+    const [capacidadSala, setCapacidadSala] = useState(knownCapacity ? String(knownCapacity) : '');
     const [precioEntrada, setPrecioEntrada] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-    const acuerdo = formatAcuerdo(prospecto);
+    const acuerdo = formatAcuerdo(proyecto);
 
     const handleConfirm = async () => {
         if (!fecha) { setError('La fecha exacta es requerida'); return; }
         setSaving(true); setError('');
         try {
             const fechaISO = new Date(`${fecha}T${hora}:00`).toISOString();
-            const res = await api.post(`/programacion/${prospecto.id}/confirmar`, {
+            const res = await api.post(`/programacion/${proyecto.id}/confirmar`, {
                 fecha: fechaISO,
                 capacidadSala: capacidadSala ? Number(capacidadSala) : undefined,
                 precioEntradaBase: precioEntrada ? Number(precioEntrada) : undefined,
@@ -374,7 +593,7 @@ const ConfirmarModal: React.FC<ConfirmarModalProps> = ({ prospecto, onClose, onS
                         <CheckCircle2 size={20} className="text-green-400" /> Confirmar Función
                     </h3>
                     <p className="text-sm text-gray-400 mt-1">
-                        {prospecto.ciudad}{prospecto.salaNombre ? ` — ${prospecto.salaNombre}` : ''}
+                        {proyecto.ciudad}{proyecto.salaNombre ? ` — ${proyecto.salaNombre}` : ''}
                     </p>
                 </div>
 
@@ -385,6 +604,29 @@ const ConfirmarModal: React.FC<ConfirmarModalProps> = ({ prospecto, onClose, onS
                             <p className="text-sm text-primary-300 font-medium">
                                 Acuerdo con sala: <span className="font-bold">{acuerdo}</span>
                             </p>
+                        </div>
+                    )}
+
+                    {/* Quick select tentantive dates */}
+                    {tentativeDatesList.length > 0 && (
+                        <div className="space-y-1.5">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest">Sugerencias de fecha tentativa</label>
+                            <div className="flex flex-wrap gap-2">
+                                {tentativeDatesList.map((d, di) => (
+                                    <button
+                                        key={di}
+                                        type="button"
+                                        onClick={() => setFecha(d)}
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                                            fecha === d
+                                                ? 'bg-primary-500/20 text-primary-400 border-primary-500/40 font-bold'
+                                                : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                                        }`}
+                                    >
+                                        {new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
 
@@ -433,24 +675,40 @@ const ConfirmarModal: React.FC<ConfirmarModalProps> = ({ prospecto, onClose, onS
 };
 
 // ─────────────────────────────────────────────────────────────
-// ProspectoCard
+// ProyectoCard
 // ─────────────────────────────────────────────────────────────
 
-interface ProspectoCardProps {
-    prospecto: FechaProspecto;
-    onEdit: (p: FechaProspecto) => void;
-    onConfirmar: (p: FechaProspecto) => void;
-    onDescartar: (p: FechaProspecto) => void;
-    onDelete: (p: FechaProspecto) => void;
-    onEstadoChange: (p: FechaProspecto, estado: EstadoProspecto) => void;
+interface ProyectoCardProps {
+    proyecto: FechaProyecto;
+    onEdit: (p: FechaProyecto) => void;
+    onConfirmar: (p: FechaProyecto) => void;
+    onDescartar: (p: FechaProyecto) => void;
+    onDelete: (p: FechaProyecto) => void;
+    onEstadoChange: (p: FechaProyecto, estado: EstadoProyecto) => void;
+    allFunciones: any[];
+    obras: ObraConProyectos[];
 }
 
-const ProspectoCard: React.FC<ProspectoCardProps> = ({ prospecto, onEdit, onConfirmar, onDescartar, onDelete, onEstadoChange }) => {
+const ProyectoCard: React.FC<ProyectoCardProps> = ({ proyecto, onEdit, onConfirmar, onDescartar, onDelete, onEstadoChange, allFunciones, obras }) => {
     const [showNotes, setShowNotes] = useState(false);
     const [showEstados, setShowEstados] = useState(false);
-    const estadoInfo = getEstado(prospecto.estado);
-    const acuerdo = formatAcuerdo(prospecto);
-    const isArchived = prospecto.estado === 'confirmada' || prospecto.estado === 'descartada';
+    const estadoInfo = getEstado(proyecto.estado);
+    const acuerdo = formatAcuerdo(proyecto);
+    const isArchived = proyecto.estado === 'confirmada' || proyecto.estado === 'descartada';
+
+    // Parse list of tentative dates
+    let tentativeDatesList: string[] = [];
+    if (proyecto.fechasTentativas) {
+        try {
+            const parsed = JSON.parse(proyecto.fechasTentativas);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                tentativeDatesList = parsed;
+            }
+        } catch (e) {}
+    }
+    if (tentativeDatesList.length === 0 && proyecto.fechaTentativa) {
+        tentativeDatesList = [proyecto.fechaTentativa];
+    }
 
     return (
         <div className={`bg-[#121212] border rounded-2xl p-4 transition-all group ${
@@ -462,44 +720,76 @@ const ProspectoCard: React.FC<ProspectoCardProps> = ({ prospecto, onEdit, onConf
                     <div className="flex items-center gap-2 flex-wrap">
                         <div className="flex items-center gap-1.5">
                             <MapPin size={14} className="text-gray-500 shrink-0" />
-                            <span className="font-bold text-white">{prospecto.ciudad}</span>
-                            {prospecto.pais !== 'Argentina' && (
-                                <span className="text-gray-500 text-xs">, {prospecto.pais}</span>
+                            <span className="font-bold text-white">{proyecto.ciudad}</span>
+                            {proyecto.pais !== 'Argentina' && (
+                                <span className="text-gray-500 text-xs">, {proyecto.pais}</span>
                             )}
                         </div>
-                        {prospecto.salaNombre && (
+                        {proyecto.salaNombre && (
                             <>
                                 <span className="text-gray-600">·</span>
                                 <div className="flex items-center gap-1 text-gray-400 text-sm">
                                     <Building2 size={12} className="shrink-0" />
-                                    <span className="truncate">{prospecto.salaNombre}</span>
+                                    <span className="truncate">{proyecto.salaNombre}</span>
                                 </div>
                             </>
                         )}
                     </div>
 
-                    {/* Fecha tentativa */}
-                    {prospecto.fechaTentativa && (
-                        <div className="flex items-center gap-1 mt-1 text-gray-500 text-xs">
-                            <Calendar size={11} />
-                            <span>Tentativa: {formatDateShort(prospecto.fechaTentativa)}</span>
+                    {/* Tentative Dates list with Conflict indicator */}
+                    {tentativeDatesList.length > 0 && (
+                        <div className="mt-2.5 space-y-1">
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Fechas tentativas:</span>
+                            <div className="flex flex-wrap gap-1.5">
+                                {tentativeDatesList.map((d, di) => {
+                                    const formatted = formatDateShort(d);
+                                    const conflicts = obtenerConflictosParaFecha(
+                                        d.substring(0, 10),
+                                        proyecto.id,
+                                        proyecto.ciudad,
+                                        proyecto.salaNombre || undefined,
+                                        proyecto.obraId,
+                                        allFunciones,
+                                        obras
+                                    );
+                                    const hasConflict = conflicts.length > 0;
+
+                                    return (
+                                        <div
+                                            key={di}
+                                            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-semibold transition-all ${
+                                                hasConflict
+                                                    ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                                    : 'bg-white/5 text-gray-400 border-white/10'
+                                            }`}
+                                            title={hasConflict ? conflicts.join('\n') : undefined}
+                                        >
+                                            <Calendar size={10} className="shrink-0" />
+                                            <span>{formatted}</span>
+                                            {hasConflict && (
+                                                <span className="text-red-400 font-bold shrink-0 ml-0.5" title={conflicts.join(', ')}>⚠️</span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 
                     {/* Contacto */}
-                    {prospecto.contactoNombre && (
+                    {proyecto.contactoNombre && (
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
                             <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <User size={11} /><span>{prospecto.contactoNombre}</span>
+                                <User size={11} /><span>{proyecto.contactoNombre}</span>
                             </div>
-                            {prospecto.contactoEmail && (
+                            {proyecto.contactoEmail && (
                                 <div className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Mail size={11} /><span>{prospecto.contactoEmail}</span>
+                                    <Mail size={11} /><span>{proyecto.contactoEmail}</span>
                                 </div>
                             )}
-                            {prospecto.contactoTel && (
+                            {proyecto.contactoTel && (
                                 <div className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Phone size={11} /><span>{prospecto.contactoTel}</span>
+                                    <Phone size={11} /><span>{proyecto.contactoTel}</span>
                                 </div>
                             )}
                         </div>
@@ -515,7 +805,7 @@ const ProspectoCard: React.FC<ProspectoCardProps> = ({ prospecto, onEdit, onConf
                     )}
 
                     {/* Notas toggle */}
-                    {prospecto.notas && (
+                    {proyecto.notas && (
                         <button
                             onClick={() => setShowNotes(!showNotes)}
                             className="flex items-center gap-1 mt-2 text-xs text-gray-500 hover:text-gray-300 transition-all"
@@ -525,17 +815,17 @@ const ProspectoCard: React.FC<ProspectoCardProps> = ({ prospecto, onEdit, onConf
                             <ChevronDown size={11} className={`transition-transform ${showNotes ? 'rotate-180' : ''}`} />
                         </button>
                     )}
-                    {showNotes && prospecto.notas && (
+                    {showNotes && proyecto.notas && (
                         <p className="mt-2 text-xs text-gray-400 bg-white/[0.03] border border-white/5 rounded-xl p-3 leading-relaxed whitespace-pre-wrap">
-                            {prospecto.notas}
+                            {proyecto.notas}
                         </p>
                     )}
 
                     {/* Confirmada: link a función */}
-                    {prospecto.estado === 'confirmada' && prospecto.funcion && (
+                    {proyecto.estado === 'confirmada' && proyecto.funcion && (
                         <div className="mt-2 flex items-center gap-1 text-xs text-green-400">
                             <CheckCircle2 size={12} />
-                            <span>Función creada: {formatDateShort(prospecto.funcion.fecha)}</span>
+                            <span>Función creada: {formatDateShort(proyecto.funcion.fecha)}</span>
                         </div>
                     )}
                 </div>
@@ -557,7 +847,7 @@ const ProspectoCard: React.FC<ProspectoCardProps> = ({ prospecto, onEdit, onConf
                                 {ESTADOS.filter(e => e.value !== 'confirmada' && e.value !== 'descartada').map(e => (
                                     <button
                                         key={e.value}
-                                        onClick={() => { onEstadoChange(prospecto, e.value); setShowEstados(false); }}
+                                        onClick={() => { onEstadoChange(proyecto, e.value); setShowEstados(false); }}
                                         className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold hover:bg-white/5 transition-all text-left"
                                     >
                                         <span className={`w-2 h-2 rounded-full ${e.dot}`} />
@@ -571,19 +861,19 @@ const ProspectoCard: React.FC<ProspectoCardProps> = ({ prospecto, onEdit, onConf
                     {/* Actions */}
                     {!isArchived && (
                         <div className="flex items-center gap-1">
-                            <button onClick={() => onEdit(prospecto)}
+                            <button onClick={() => onEdit(proyecto)}
                                 className="p-1.5 hover:bg-white/5 rounded-lg text-gray-500 hover:text-white transition-all" title="Editar">
                                 <Pencil size={13} />
                             </button>
-                            <button onClick={() => onConfirmar(prospecto)}
+                            <button onClick={() => onConfirmar(proyecto)}
                                 className="p-1.5 hover:bg-green-500/10 rounded-lg text-gray-500 hover:text-green-400 transition-all" title="Confirmar → crear función">
                                 <CheckCircle2 size={13} />
                             </button>
-                            <button onClick={() => onDescartar(prospecto)}
+                            <button onClick={() => onDescartar(proyecto)}
                                 className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-400 transition-all" title="Descartar">
                                 <XCircle size={13} />
                             </button>
-                            <button onClick={() => onDelete(prospecto)}
+                            <button onClick={() => onDelete(proyecto)}
                                 className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-all" title="Eliminar">
                                 <Trash2 size={13} />
                             </button>
@@ -604,14 +894,24 @@ const Programacion: React.FC = () => {
     const navigate = useNavigate();
     const [selectedObraId, setSelectedObraId] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
-    const [editingProspecto, setEditingProspecto] = useState<FechaProspecto | null>(null);
-    const [confirmingProspecto, setConfirmingProspecto] = useState<FechaProspecto | null>(null);
+    const [editingProyecto, setEditingProyecto] = useState<FechaProyecto | null>(null);
+    const [confirmingProyecto, setConfirmingProyecto] = useState<FechaProyecto | null>(null);
     const [showArchived, setShowArchived] = useState(false);
+    const [showConfirmed, setShowConfirmed] = useState(false); // Collapsible group for confirmed functions
 
-    const { data: obras = [], isLoading } = useQuery<ObraConProspectos[]>({
+    const { data: obras = [], isLoading } = useQuery<ObraConProyectos[]>({
         queryKey: ['programacion'],
         queryFn: async () => {
             const res = await api.get('/programacion');
+            return res.data;
+        }
+    });
+
+    // Query all functions to provide autocomplete suggestion data and conflict detection
+    const { data: allFunciones = [] } = useQuery<any[]>({
+        queryKey: ['all-funciones'],
+        queryFn: async () => {
+            const res = await api.get('/funciones');
             return res.data;
         }
     });
@@ -626,7 +926,7 @@ const Programacion: React.FC = () => {
     }, [obras, selectedObraId]);
 
     const updateEstadoMutation = useMutation({
-        mutationFn: async ({ id, estado }: { id: string; estado: EstadoProspecto }) => {
+        mutationFn: async ({ id, estado }: { id: string; estado: EstadoProyecto }) => {
             await api.put(`/programacion/${id}`, { estado });
         },
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['programacion'] })
@@ -637,44 +937,44 @@ const Programacion: React.FC = () => {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['programacion'] })
     });
 
-    const handleDescartar = (p: FechaProspecto) => {
-        if (window.confirm(`¿Descartar el prospecto en ${p.ciudad}?`)) {
+    const handleDescartar = (p: FechaProyecto) => {
+        if (window.confirm(`¿Descartar el proyecto en ${p.ciudad}?`)) {
             updateEstadoMutation.mutate({ id: p.id, estado: 'descartada' });
         }
     };
 
-    const handleDelete = (p: FechaProspecto) => {
-        if (window.confirm(`¿Eliminar el prospecto en ${p.ciudad}? Esta acción no se puede deshacer.`)) {
+    const handleDelete = (p: FechaProyecto) => {
+        if (window.confirm(`¿Eliminar el proyecto en ${p.ciudad}? Esta acción no se puede deshacer.`)) {
             deleteMutation.mutate(p.id);
         }
     };
 
     const handleFormSuccess = () => {
         setShowForm(false);
-        setEditingProspecto(null);
+        setEditingProyecto(null);
         queryClient.invalidateQueries({ queryKey: ['programacion'] });
     };
 
     const handleConfirmSuccess = (funcionId: string) => {
-        setConfirmingProspecto(null);
+        setConfirmingProyecto(null);
         queryClient.invalidateQueries({ queryKey: ['programacion'] });
         // Navigate to funciones
         navigate('/funciones');
     };
 
-    const activeProspectos = selectedObra?.prospectos.filter(p => p.estado !== 'confirmada' && p.estado !== 'descartada') ?? [];
-    const archivedProspectos = selectedObra?.prospectos.filter(p => p.estado === 'confirmada' || p.estado === 'descartada') ?? [];
+    const activeProyectos = selectedObra?.prospectos.filter(p => p.estado !== 'confirmada' && p.estado !== 'descartada') ?? [];
+    const archivedProyectos = selectedObra?.prospectos.filter(p => p.estado === 'confirmada' || p.estado === 'descartada') ?? [];
 
-    // Group active prospectos by estado order
-    const estadoOrder: EstadoProspecto[] = ['oferta_enviada', 'negociando', 'en_contacto', 'idea'];
+    // Group active projects by estado order
+    const estadoOrder: EstadoProyecto[] = ['oferta_enviada', 'negociando', 'en_contacto', 'idea'];
     const groupedActive = estadoOrder.map(e => ({
         estado: e,
         label: getEstado(e).label,
-        items: activeProspectos.filter(p => p.estado === e)
+        items: activeProyectos.filter(p => p.estado === e)
     })).filter(g => g.items.length > 0);
 
     // Stats for sidebar badges
-    const getObraStats = (obra: ObraConProspectos) => {
+    const getObraStats = (obra: ObraConProyectos) => {
         const active = obra.prospectos.filter(p => p.estado !== 'confirmada' && p.estado !== 'descartada').length;
         const confirmed = obra.funciones.length;
         return { active, confirmed };
@@ -691,7 +991,7 @@ const Programacion: React.FC = () => {
                         </div>
                         <div>
                             <h1 className="text-lg font-bold tracking-tight">Programación</h1>
-                            <p className="text-xs text-gray-500">Pipeline de fechas por obra</p>
+                            <p className="text-xs text-gray-500">Pipeline de proyectos por obra</p>
                         </div>
                     </div>
                 </div>
@@ -735,7 +1035,7 @@ const Programacion: React.FC = () => {
                                             )}
                                             {active === 0 && confirmed === 0 && (
                                                 <span className="px-1.5 py-0.5 bg-white/5 text-gray-600 text-[10px] font-bold rounded">
-                                                    Sin prospectos
+                                                    Sin proyectos
                                                 </span>
                                             )}
                                         </div>
@@ -765,38 +1065,55 @@ const Programacion: React.FC = () => {
                                 <p className="text-gray-500 text-sm">{selectedObra.artistaPrincipal}</p>
                             </div>
                             <button
-                                onClick={() => { setEditingProspecto(null); setShowForm(true); }}
+                                onClick={() => { setEditingProyecto(null); setShowForm(true); }}
                                 className="flex items-center gap-2 px-4 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-primary-500/20"
                             >
-                                <Plus size={16} /> Agregar prospecto
+                                <Plus size={16} /> Agregar proyecto
                             </button>
                         </div>
 
-                        {/* Funciones confirmadas */}
+                        {/* Collapsible: Funciones confirmadas */}
                         {selectedObra.funciones.length > 0 && (
-                            <div className="mb-6">
-                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    <CheckCircle2 size={13} className="text-green-500" /> Funciones confirmadas
-                                </h3>
-                                <div className="space-y-1.5">
-                                    {selectedObra.funciones.map(f => (
-                                        <div
-                                            key={f.id}
-                                            onClick={() => navigate('/funciones')}
-                                            className="flex items-center gap-3 px-4 py-2.5 bg-green-500/5 border border-green-500/10 rounded-xl hover:border-green-500/25 transition-all cursor-pointer group"
-                                        >
-                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                            <span className="text-green-400 text-sm font-semibold">{formatDateShort(f.fecha)}</span>
-                                            <span className="text-gray-500 text-sm flex items-center gap-1">
-                                                <Building2 size={12} />{f.salaNombre || 'Sala a confirmar'}
-                                            </span>
-                                            <span className="text-gray-600 text-xs flex items-center gap-1">
-                                                <MapPin size={11} />{f.ciudad}
-                                            </span>
-                                            <ArrowRight size={13} className="ml-auto text-gray-600 group-hover:text-green-400 transition-all" />
-                                        </div>
-                                    ))}
-                                </div>
+                            <div className="mb-6 bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden">
+                                <button
+                                    onClick={() => setShowConfirmed(!showConfirmed)}
+                                    className="w-full flex items-center justify-between p-4 hover:bg-white/[0.04] transition-all text-left"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 size={16} className="text-green-500 shrink-0" />
+                                        <span className="text-sm font-bold text-gray-300">Funciones ya confirmadas</span>
+                                        <span className="px-2 py-0.5 bg-green-500/10 text-green-400 text-[10px] font-bold rounded-full border border-green-500/20">
+                                            {selectedObra.funciones.length}
+                                        </span>
+                                    </div>
+                                    <ChevronDown
+                                        size={16}
+                                        className={`text-gray-500 transition-transform duration-200 shrink-0 ${showConfirmed ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
+                                {showConfirmed && (
+                                    <div className="p-4 pt-0 border-t border-white/5 divide-y divide-white/5 space-y-1">
+                                        {selectedObra.funciones.map(f => (
+                                            <div
+                                                key={f.id}
+                                                onClick={() => navigate('/funciones')}
+                                                className="flex items-center gap-3 py-2.5 hover:text-green-400 transition-all cursor-pointer group"
+                                            >
+                                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                                                <span className="text-green-400 text-sm font-semibold shrink-0">{formatDateShort(f.fecha)}</span>
+                                                <span className="text-gray-400 text-sm flex items-center gap-1 truncate">
+                                                    <Building2 size={12} className="shrink-0" />
+                                                    {f.salaNombre || 'Sala a confirmar'}
+                                                </span>
+                                                <span className="text-gray-500 text-xs flex items-center gap-1 shrink-0">
+                                                    <MapPin size={11} className="shrink-0" />
+                                                    {f.ciudad}
+                                                </span>
+                                                <ArrowRight size={13} className="ml-auto text-gray-600 group-hover:text-green-400 transition-all shrink-0" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -806,16 +1123,16 @@ const Programacion: React.FC = () => {
                                 Pipeline de negociación
                             </h3>
 
-                            {activeProspectos.length === 0 ? (
+                            {activeProyectos.length === 0 ? (
                                 <div className="bg-[#121212] border border-white/5 rounded-2xl p-12 text-center">
                                     <CalendarRange size={40} className="mx-auto mb-3 text-gray-700" />
-                                    <p className="text-gray-500 font-medium">No hay fechas en el pipeline</p>
-                                    <p className="text-gray-600 text-sm mt-1">Agregá un prospecto para empezar a trackear negociaciones</p>
+                                    <p className="text-gray-500 font-medium">No hay proyectos en el pipeline</p>
+                                    <p className="text-gray-600 text-sm mt-1">Agregá un proyecto para empezar a trackear negociaciones</p>
                                     <button
-                                        onClick={() => { setEditingProspecto(null); setShowForm(true); }}
+                                        onClick={() => { setEditingProyecto(null); setShowForm(true); }}
                                         className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-500/10 text-primary-400 border border-primary-500/20 rounded-xl text-sm font-semibold mx-auto hover:bg-primary-500/20 transition-all"
                                     >
-                                        <Plus size={14} /> Agregar prospecto
+                                        <Plus size={14} /> Agregar proyecto
                                     </button>
                                 </div>
                             ) : (
@@ -829,14 +1146,16 @@ const Programacion: React.FC = () => {
                                             </div>
                                             <div className="space-y-2 pl-4 border-l border-white/[0.06]">
                                                 {group.items.map(p => (
-                                                    <ProspectoCard
+                                                    <ProyectoCard
                                                         key={p.id}
-                                                        prospecto={p}
-                                                        onEdit={p => { setEditingProspecto(p); setShowForm(true); }}
-                                                        onConfirmar={setConfirmingProspecto}
+                                                        proyecto={p}
+                                                        onEdit={p => { setEditingProyecto(p); setShowForm(true); }}
+                                                        onConfirmar={setConfirmingProyecto}
                                                         onDescartar={handleDescartar}
                                                         onDelete={handleDelete}
                                                         onEstadoChange={(p, estado) => updateEstadoMutation.mutate({ id: p.id, estado })}
+                                                        allFunciones={allFunciones}
+                                                        obras={obras}
                                                     />
                                                 ))}
                                             </div>
@@ -847,26 +1166,28 @@ const Programacion: React.FC = () => {
                         </div>
 
                         {/* Archivados (confirmados/descartados) */}
-                        {archivedProspectos.length > 0 && (
+                        {archivedProyectos.length > 0 && (
                             <div>
                                 <button
                                     onClick={() => setShowArchived(!showArchived)}
                                     className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-400 font-semibold uppercase tracking-wider transition-all mb-3"
                                 >
                                     <ChevronRight size={14} className={`transition-transform ${showArchived ? 'rotate-90' : ''}`} />
-                                    Archivados ({archivedProspectos.length})
+                                    Archivados ({archivedProyectos.length})
                                 </button>
                                 {showArchived && (
                                     <div className="space-y-2">
-                                        {archivedProspectos.map(p => (
-                                            <ProspectoCard
+                                        {archivedProyectos.map(p => (
+                                            <ProyectoCard
                                                 key={p.id}
-                                                prospecto={p}
+                                                proyecto={p}
                                                 onEdit={() => {}}
                                                 onConfirmar={() => {}}
                                                 onDescartar={() => {}}
                                                 onDelete={handleDelete}
                                                 onEstadoChange={() => {}}
+                                                allFunciones={allFunciones}
+                                                obras={obras}
                                             />
                                         ))}
                                     </div>
@@ -879,20 +1200,23 @@ const Programacion: React.FC = () => {
 
             {/* Slide-over form */}
             {showForm && selectedObraId && (
-                <ProspectoForm
+                <ProyectoForm
                     obraId={selectedObraId}
-                    initial={editingProspecto}
-                    onClose={() => { setShowForm(false); setEditingProspecto(null); }}
+                    initial={editingProyecto}
+                    onClose={() => { setShowForm(false); setEditingProyecto(null); }}
                     onSuccess={handleFormSuccess}
+                    allFunciones={allFunciones}
+                    obras={obras}
                 />
             )}
 
             {/* Confirmar modal */}
-            {confirmingProspecto && (
+            {confirmingProyecto && (
                 <ConfirmarModal
-                    prospecto={confirmingProspecto}
-                    onClose={() => setConfirmingProspecto(null)}
+                    proyecto={confirmingProyecto}
+                    onClose={() => setConfirmingProyecto(null)}
                     onSuccess={handleConfirmSuccess}
+                    allFunciones={allFunciones}
                 />
             )}
         </div>

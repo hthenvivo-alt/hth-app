@@ -755,3 +755,73 @@ export const saveAgentLiquidacion = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ error: `Error al guardar liquidación: ${error.message || error}` });
     }
 };
+
+// ─────────────────────────────────────────────────────────────
+// PROYECTOS DE PROGRAMACIÓN
+// ─────────────────────────────────────────────────────────────
+
+export const getAgentProyectos = async (req: Request, res: Response) => {
+    try {
+        const proyectos = await prisma.fechaProspecto.findMany({
+            include: {
+                obra: { select: { id: true, nombre: true } }
+            },
+            orderBy: { created_at: 'desc' }
+        });
+        res.json(proyectos);
+    } catch (error) {
+        console.error('Error fetching agent proyectos:', error);
+        res.status(500).json({ error: 'Error al obtener proyectos' });
+    }
+};
+
+export const createAgentProyecto = async (req: Request, res: Response) => {
+    const {
+        obraId, ciudad, pais, fechaTentativa, fechasTentativas,
+        salaNombre, contactoNombre, contactoEmail, contactoTel,
+        acuerdoTipo, acuerdoPorcentaje, acuerdoSobre, acuerdoMonto,
+        estado, notas
+    } = req.body;
+
+    if (!obraId || !ciudad) {
+        return res.status(400).json({ error: 'obraId y ciudad son requeridos' });
+    }
+
+    try {
+        let finalFechaTentativa: Date | null = null;
+        let finalFechasTentativas: string | null = null;
+
+        if (Array.isArray(fechasTentativas) && fechasTentativas.length > 0) {
+            finalFechasTentativas = JSON.stringify(fechasTentativas);
+            finalFechaTentativa = new Date(fechasTentativas[0]);
+        } else if (fechaTentativa) {
+            finalFechaTentativa = new Date(fechaTentativa);
+            finalFechasTentativas = JSON.stringify([fechaTentativa]);
+        }
+
+        const proyecto = await prisma.fechaProspecto.create({
+            data: {
+                obraId,
+                ciudad,
+                pais: pais || 'Argentina',
+                fechaTentativa: finalFechaTentativa,
+                fechasTentativas: finalFechasTentativas,
+                salaNombre: salaNombre || null,
+                contactoNombre: contactoNombre || null,
+                contactoEmail: contactoEmail || null,
+                contactoTel: contactoTel || null,
+                acuerdoTipo: acuerdoTipo || null,
+                acuerdoPorcentaje: acuerdoPorcentaje != null ? Number(acuerdoPorcentaje) : null,
+                acuerdoSobre: acuerdoSobre || null,
+                acuerdoMonto: acuerdoMonto != null ? Number(acuerdoMonto) : null,
+                estado: estado || 'idea',
+                notas: notas || null,
+            }
+        });
+
+        res.status(201).json(proyecto);
+    } catch (error) {
+        console.error('Error creating agent proyecto:', error);
+        res.status(500).json({ error: 'Error al crear el proyecto' });
+    }
+};

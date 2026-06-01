@@ -60,7 +60,7 @@ export const getByObra = async (req: AuthRequest, res: Response) => {
         res.json({ prospectos, funciones });
     } catch (error) {
         console.error('Error fetching prospectos by obra:', error);
-        res.status(500).json({ error: 'Error al obtener prospectos' });
+        res.status(500).json({ error: 'Error al obtener proyectos' });
     }
 };
 
@@ -69,7 +69,7 @@ export const getByObra = async (req: AuthRequest, res: Response) => {
 // ─────────────────────────────────────────────────────────────
 export const create = async (req: AuthRequest, res: Response) => {
     const {
-        obraId, ciudad, pais, fechaTentativa,
+        obraId, ciudad, pais, fechaTentativa, fechasTentativas,
         salaNombre, contactoNombre, contactoEmail, contactoTel,
         acuerdoTipo, acuerdoPorcentaje, acuerdoSobre, acuerdoMonto,
         estado, notas
@@ -80,12 +80,24 @@ export const create = async (req: AuthRequest, res: Response) => {
     }
 
     try {
+        let finalFechaTentativa: Date | null = null;
+        let finalFechasTentativas: string | null = null;
+
+        if (Array.isArray(fechasTentativas) && fechasTentativas.length > 0) {
+            finalFechasTentativas = JSON.stringify(fechasTentativas);
+            finalFechaTentativa = new Date(fechasTentativas[0]);
+        } else if (fechaTentativa) {
+            finalFechaTentativa = new Date(fechaTentativa);
+            finalFechasTentativas = JSON.stringify([fechaTentativa]);
+        }
+
         const prospecto = await prisma.fechaProspecto.create({
             data: {
                 obraId,
                 ciudad,
                 pais: pais || 'Argentina',
-                fechaTentativa: fechaTentativa ? new Date(fechaTentativa) : null,
+                fechaTentativa: finalFechaTentativa,
+                fechasTentativas: finalFechasTentativas,
                 salaNombre: salaNombre || null,
                 contactoNombre: contactoNombre || null,
                 contactoEmail: contactoEmail || null,
@@ -102,7 +114,7 @@ export const create = async (req: AuthRequest, res: Response) => {
         res.status(201).json(prospecto);
     } catch (error) {
         console.error('Error creating prospecto:', error);
-        res.status(500).json({ error: 'Error al crear el prospecto' });
+        res.status(500).json({ error: 'Error al crear el proyecto' });
     }
 };
 
@@ -112,21 +124,36 @@ export const create = async (req: AuthRequest, res: Response) => {
 export const update = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const {
-        ciudad, pais, fechaTentativa,
+        ciudad, pais, fechaTentativa, fechasTentativas,
         salaNombre, contactoNombre, contactoEmail, contactoTel,
         acuerdoTipo, acuerdoPorcentaje, acuerdoSobre, acuerdoMonto,
         estado, notas
     } = req.body;
 
     try {
+        let finalFechaTentativa: Date | null | undefined = undefined;
+        let finalFechasTentativas: string | null | undefined = undefined;
+
+        if (fechasTentativas !== undefined) {
+            if (Array.isArray(fechasTentativas)) {
+                finalFechasTentativas = JSON.stringify(fechasTentativas);
+                finalFechaTentativa = fechasTentativas.length > 0 ? new Date(fechasTentativas[0]) : null;
+            } else {
+                finalFechasTentativas = null;
+                finalFechaTentativa = null;
+            }
+        } else if (fechaTentativa !== undefined) {
+            finalFechaTentativa = fechaTentativa ? new Date(fechaTentativa) : null;
+            finalFechasTentativas = fechaTentativa ? JSON.stringify([fechaTentativa]) : null;
+        }
+
         const prospecto = await prisma.fechaProspecto.update({
             where: { id: id as string },
             data: {
                 ciudad,
                 pais,
-                fechaTentativa: fechaTentativa !== undefined
-                    ? (fechaTentativa ? new Date(fechaTentativa) : null)
-                    : undefined,
+                fechaTentativa: finalFechaTentativa !== undefined ? finalFechaTentativa : undefined,
+                fechasTentativas: finalFechasTentativas !== undefined ? finalFechasTentativas : undefined,
                 salaNombre: salaNombre !== undefined ? salaNombre || null : undefined,
                 contactoNombre: contactoNombre !== undefined ? contactoNombre || null : undefined,
                 contactoEmail: contactoEmail !== undefined ? contactoEmail || null : undefined,
@@ -147,7 +174,7 @@ export const update = async (req: AuthRequest, res: Response) => {
         res.json(prospecto);
     } catch (error) {
         console.error('Error updating prospecto:', error);
-        res.status(500).json({ error: 'Error al actualizar el prospecto' });
+        res.status(500).json({ error: 'Error al actualizar el proyecto' });
     }
 };
 
@@ -161,7 +188,7 @@ export const remove = async (req: AuthRequest, res: Response) => {
         res.status(204).send();
     } catch (error) {
         console.error('Error deleting prospecto:', error);
-        res.status(500).json({ error: 'Error al eliminar el prospecto' });
+        res.status(500).json({ error: 'Error al eliminar el proyecto' });
     }
 };
 
@@ -184,10 +211,10 @@ export const confirmar = async (req: AuthRequest, res: Response) => {
         });
 
         if (!prospecto) {
-            return res.status(404).json({ error: 'Prospecto no encontrado' });
+            return res.status(404).json({ error: 'Proyecto no encontrado' });
         }
         if (prospecto.estado === 'confirmada') {
-            return res.status(400).json({ error: 'Este prospecto ya fue confirmado' });
+            return res.status(400).json({ error: 'Este proyecto ya fue confirmado' });
         }
 
         const result = await prisma.$transaction(async (tx) => {

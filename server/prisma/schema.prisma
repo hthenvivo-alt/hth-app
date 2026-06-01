@@ -123,6 +123,7 @@ model FechaProspecto {
   ciudad             String
   pais               String    @default("Argentina")
   fechaTentativa     DateTime?
+  fechasTentativas   String?   // Array JSON de fechas tentativas
   salaNombre         String?
   contactoNombre     String?
   contactoEmail      String?

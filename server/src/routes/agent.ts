@@ -13,6 +13,8 @@ import {
     getAgentLiquidacion,
     saveAgentLiquidacion,
     runMigration,
+    getAgentProyectos,
+    createAgentProyecto,
 } from '../controllers/agent.js';
 import { agentAuthenticate } from '../middleware/agentAuth.js';
 
@@ -26,6 +28,10 @@ router.get('/reference', getReferenceData);
 
 // Maintenance
 router.post('/run-migration', runMigration);
+
+// Proyectos (Programación)
+router.get('/proyectos', getAgentProyectos);
+router.post('/proyectos', createAgentProyecto);
 
 // Funciones
 router.get('/funciones', getAgentFunciones);

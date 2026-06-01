@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS "FechaProspecto" (
     "ciudad"            TEXT NOT NULL,
     "pais"              TEXT NOT NULL DEFAULT 'Argentina',
     "fechaTentativa"    TIMESTAMP(3),
+    "fechasTentativas"  TEXT,
     "salaNombre"        TEXT,
     "contactoNombre"    TEXT,
     "contactoEmail"     TEXT,
@@ -25,5 +26,8 @@ CREATE TABLE IF NOT EXISTS "FechaProspecto" (
     CONSTRAINT "FechaProspecto_obraId_fkey"    FOREIGN KEY ("obraId")    REFERENCES "Obra"("id")    ON DELETE CASCADE,
     CONSTRAINT "FechaProspecto_funcionId_fkey" FOREIGN KEY ("funcionId") REFERENCES "Funcion"("id") ON DELETE SET NULL
 );
+
+-- Si la tabla ya existía, agregar la columna de múltiples fechas
+ALTER TABLE "FechaProspecto" ADD COLUMN IF NOT EXISTS "fechasTentativas" TEXT;
 
 CREATE INDEX IF NOT EXISTS "FechaProspecto_obraId_idx" ON "FechaProspecto"("obraId");
