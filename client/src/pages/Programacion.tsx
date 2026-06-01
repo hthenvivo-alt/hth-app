@@ -59,6 +59,19 @@ interface ObraConProyectos {
 // Conflict Detection Utility
 // ─────────────────────────────────────────────────────────────
 
+const getLocalDateString = (d: string) => {
+    if (!d) return '';
+    try {
+        const date = new Date(d);
+        const year = date.toLocaleDateString('en-US', { year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' });
+        const month = date.toLocaleDateString('en-US', { month: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
+        const day = date.toLocaleDateString('en-US', { day: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' });
+        return `${year}-${month}-${day}`;
+    } catch (e) {
+        return d.substring(0, 10);
+    }
+};
+
 const obtenerConflictosParaFecha = (
     fechaStr: string, // format: "YYYY-MM-DD"
     proyectoId: string | undefined,
@@ -75,7 +88,7 @@ const obtenerConflictosParaFecha = (
     // 1. Check against confirmed functions
     for (const f of allFunciones) {
         if (!f.fecha) continue;
-        const fDayStr = f.fecha.substring(0, 10);
+        const fDayStr = getLocalDateString(f.fecha);
         if (fDayStr === targetDayStr) {
             // Check same Obra
             if (f.obraId === obraId) {
@@ -160,8 +173,23 @@ const formatAcuerdo = (p: FechaProyecto) => {
     return null;
 };
 
-const formatDateShort = (d: string) =>
-    new Date(d).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' });
+const formatDateShort = (d: string) => {
+    if (!d) return '';
+    // If it's a date-only string (YYYY-MM-DD), parse timezone-safely without shifting
+    if (d.length <= 10 && !d.includes('T') && !d.includes(':')) {
+        const parts = d.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+    }
+    // Otherwise, parse as ISO datetime in Argentina timezone
+    return new Date(d).toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'America/Argentina/Buenos_Aires'
+    });
+};
 
 // ─────────────────────────────────────────────────────────────
 // ProyectoForm (slide-over form)
