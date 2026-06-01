@@ -54,6 +54,7 @@ model Obra {
   deducciones          ObraDeduccion[]
   artistas             User[]           @relation("ArtistasEnObras")
   simulaciones         SimulacionLiquidacion[]
+  prospectos           FechaProspecto[]
 }
 
 model ObraDeduccion {
@@ -113,6 +114,32 @@ model Funcion {
   liquidacion               Liquidacion?
   logistica                 LogisticaRuta?
   ventas                    Venta[]
+  prospecto                 FechaProspecto?
+}
+
+model FechaProspecto {
+  id                 String    @id @default(uuid())
+  obraId             String
+  ciudad             String
+  pais               String    @default("Argentina")
+  fechaTentativa     DateTime?
+  salaNombre         String?
+  contactoNombre     String?
+  contactoEmail      String?
+  contactoTel        String?
+  // Acuerdo económico con la sala (pre-carga la liquidación)
+  acuerdoTipo        String?   // "porcentaje" | "monto_fijo"
+  acuerdoPorcentaje  Decimal?  @db.Decimal(5, 2)
+  acuerdoSobre       String?   // "Bruta" | "Neta"
+  acuerdoMonto       Decimal?  @db.Decimal(15, 2)
+  // Pipeline
+  estado             String    @default("idea")
+  notas              String?
+  funcionId          String?   @unique
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+  obra               Obra      @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  funcion            Funcion?  @relation(fields: [funcionId], references: [id])
 }
 
 model Invitado {

@@ -4,6 +4,7 @@ import {
     LayoutDashboard,
     Clapperboard,
     Calendar,
+    CalendarRange,
     FileText,
     BarChart3,
     Users,
@@ -41,7 +42,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         ];
     } else if (isAdmin) {
         navItems.splice(2, 0, { icon: Clapperboard, label: 'Obras', path: '/obras' });
-        navItems.splice(3, 0, { icon: BarChart3, label: 'Reportes', path: '/reportes' });
+        navItems.splice(3, 0, { icon: CalendarRange, label: 'Programación', path: '/programacion' });
+        navItems.splice(4, 0, { icon: BarChart3, label: 'Reportes', path: '/reportes' });
         navItems.push({ icon: BarChart3, label: 'Liquidación', path: '/liquidacion' });
         navItems.push({ icon: FlaskConical, label: 'Simulaciones', path: '/simulacion' });
         navItems.push({ icon: Users, label: 'Usuarios', path: '/usuarios' });
