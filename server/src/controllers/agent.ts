@@ -152,7 +152,32 @@ export const getAgentFuncionDetail = async (req: AuthRequest, res: Response) => 
 };
 
 export const createAgentFuncion = async (req: AuthRequest, res: Response) => {
-    const { obraId, fecha, precioBase, salaNombre, ciudad, capacidadSala } = req.body;
+    const {
+        obraId,
+        fecha,
+        precioBase,
+        precioEntradaBase,
+        salaNombre,
+        salaDireccion,
+        ciudad,
+        pais,
+        capacidadSala,
+        linkVentaTicketera,
+        linkVenta,
+        linkMonitoreoVenta,
+        linkMonitoreo,
+        notasProduccion,
+        notas,
+        productorAsociadoId,
+        passVentaTicketera,
+        userVentaTicketera,
+        vendidas,
+        metaAdSetId,
+        confirmada,
+        acuerdoPorcentaje,
+        acuerdoSobre
+    } = req.body;
+
     if (!obraId || !fecha || !salaNombre || !ciudad) {
         return res.status(400).json({ error: 'Missing required fields: obraId, fecha, salaNombre, ciudad' });
     }
@@ -165,10 +190,23 @@ export const createAgentFuncion = async (req: AuthRequest, res: Response) => {
             data: {
                 obraId,
                 fecha: new Date(fecha),
-                precioEntradaBase: precioBase || 0,
+                precioEntradaBase: precioEntradaBase !== undefined ? precioEntradaBase : (precioBase || 0),
                 capacidadSala: capacidadSala || 0,
                 salaNombre,
                 ciudad,
+                salaDireccion: salaDireccion || null,
+                pais: pais || 'Argentina',
+                linkVentaTicketera: linkVentaTicketera || linkVenta || null,
+                linkMonitoreoVenta: linkMonitoreoVenta || linkMonitoreo || null,
+                notasProduccion: notasProduccion || notas || null,
+                productorAsociadoId: productorAsociadoId || null,
+                passVentaTicketera: passVentaTicketera || null,
+                userVentaTicketera: userVentaTicketera || null,
+                vendidas: vendidas !== undefined ? Number(vendidas) : 0,
+                metaAdSetId: metaAdSetId || null,
+                confirmada: confirmada !== undefined ? Boolean(confirmada) : true,
+                acuerdoPorcentaje: acuerdoPorcentaje !== undefined ? Number(acuerdoPorcentaje) : null,
+                acuerdoSobre: acuerdoSobre || 'Neta',
             }
         });
 
@@ -196,17 +234,62 @@ export const createAgentFuncion = async (req: AuthRequest, res: Response) => {
 
 export const updateAgentFuncion = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const { obraId, fecha, precioBase, salaNombre, ciudad, capacidadSala } = req.body;
     if (!id) return res.status(400).json({ error: 'Missing funcion ID' });
+
+    const {
+        obraId,
+        fecha,
+        precioBase,
+        precioEntradaBase,
+        salaNombre,
+        salaDireccion,
+        ciudad,
+        pais,
+        capacidadSala,
+        linkVentaTicketera,
+        linkVenta,
+        linkMonitoreoVenta,
+        linkMonitoreo,
+        notasProduccion,
+        notas,
+        productorAsociadoId,
+        passVentaTicketera,
+        userVentaTicketera,
+        vendidas,
+        metaAdSetId,
+        confirmada,
+        acuerdoPorcentaje,
+        acuerdoSobre
+    } = req.body;
 
     try {
         const updateData: any = {};
-        if (obraId) updateData.obraId = obraId;
-        if (fecha) updateData.fecha = new Date(fecha);
-        if (precioBase !== undefined) updateData.precioEntradaBase = precioBase;
-        if (salaNombre) updateData.salaNombre = salaNombre;
-        if (ciudad) updateData.ciudad = ciudad;
+        if (obraId !== undefined) updateData.obraId = obraId;
+        if (fecha !== undefined) updateData.fecha = new Date(fecha);
+        if (precioEntradaBase !== undefined) {
+            updateData.precioEntradaBase = precioEntradaBase;
+        } else if (precioBase !== undefined) {
+            updateData.precioEntradaBase = precioBase;
+        }
+        if (salaNombre !== undefined) updateData.salaNombre = salaNombre;
+        if (salaDireccion !== undefined) updateData.salaDireccion = salaDireccion;
+        if (ciudad !== undefined) updateData.ciudad = ciudad;
+        if (pais !== undefined) updateData.pais = pais;
         if (capacidadSala !== undefined) updateData.capacidadSala = capacidadSala;
+        if (linkVentaTicketera !== undefined) updateData.linkVentaTicketera = linkVentaTicketera;
+        else if (linkVenta !== undefined) updateData.linkVentaTicketera = linkVenta;
+        if (linkMonitoreoVenta !== undefined) updateData.linkMonitoreoVenta = linkMonitoreoVenta;
+        else if (linkMonitoreo !== undefined) updateData.linkMonitoreoVenta = linkMonitoreo;
+        if (notasProduccion !== undefined) updateData.notasProduccion = notasProduccion;
+        else if (notas !== undefined) updateData.notasProduccion = notas;
+        if (productorAsociadoId !== undefined) updateData.productorAsociadoId = productorAsociadoId;
+        if (passVentaTicketera !== undefined) updateData.passVentaTicketera = passVentaTicketera;
+        if (userVentaTicketera !== undefined) updateData.userVentaTicketera = userVentaTicketera;
+        if (vendidas !== undefined) updateData.vendidas = Number(vendidas);
+        if (metaAdSetId !== undefined) updateData.metaAdSetId = metaAdSetId;
+        if (confirmada !== undefined) updateData.confirmada = Boolean(confirmada);
+        if (acuerdoPorcentaje !== undefined) updateData.acuerdoPorcentaje = Number(acuerdoPorcentaje);
+        if (acuerdoSobre !== undefined) updateData.acuerdoSobre = acuerdoSobre;
 
         const updatedFuncion = await prisma.funcion.update({
             where: { id: id as string },
@@ -644,6 +727,8 @@ export const saveAgentLiquidacion = async (req: AuthRequest, res: Response) => {
                     repartoProduccionMonto: nOrNull(data.repartoProduccionMonto),
                     moneda: data.moneda,
                     tipoCambio: num(data.tipoCambio),
+                    bordereauxImage: data.bordereauxImage !== undefined ? data.bordereauxImage : undefined,
+                    grupalId: data.grupalId !== undefined ? data.grupalId : undefined,
                     confirmada: data.confirmada ?? false,
                     fechaConfirmacion: data.confirmada ? new Date() : null,
                     items: {
@@ -684,6 +769,8 @@ export const saveAgentLiquidacion = async (req: AuthRequest, res: Response) => {
                     repartoProduccionMonto: nOrNull(data.repartoProduccionMonto),
                     moneda: data.moneda,
                     tipoCambio: num(data.tipoCambio),
+                    bordereauxImage: data.bordereauxImage || null,
+                    grupalId: data.grupalId || null,
                     confirmada: data.confirmada ?? false,
                     fechaConfirmacion: data.confirmada ? new Date() : null,
                     items: {
@@ -780,7 +867,7 @@ export const createAgentProyecto = async (req: Request, res: Response) => {
         obraId, ciudad, pais, fechaTentativa, fechasTentativas,
         salaNombre, contactoNombre, contactoEmail, contactoTel,
         acuerdoTipo, acuerdoPorcentaje, acuerdoSobre, acuerdoMonto,
-        estado, notas
+        estado, notas, funcionId
     } = req.body;
 
     if (!obraId || !ciudad) {
@@ -816,6 +903,7 @@ export const createAgentProyecto = async (req: Request, res: Response) => {
                 acuerdoMonto: acuerdoMonto != null ? Number(acuerdoMonto) : null,
                 estado: estado || 'idea',
                 notas: notas || null,
+                funcionId: funcionId || null,
             }
         });
 
@@ -823,5 +911,241 @@ export const createAgentProyecto = async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Error creating agent proyecto:', error);
         res.status(500).json({ error: 'Error al crear el proyecto' });
+    }
+};
+
+export const updateAgentProyecto = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Falta el ID del proyecto' });
+
+    const {
+        obraId, ciudad, pais, fechaTentativa, fechasTentativas,
+        salaNombre, contactoNombre, contactoEmail, contactoTel,
+        acuerdoTipo, acuerdoPorcentaje, acuerdoSobre, acuerdoMonto,
+        estado, notas, funcionId
+    } = req.body;
+
+    try {
+        let finalFechaTentativa: Date | null | undefined = undefined;
+        let finalFechasTentativas: string | null | undefined = undefined;
+
+        if (fechasTentativas !== undefined) {
+            if (Array.isArray(fechasTentativas)) {
+                finalFechasTentativas = JSON.stringify(fechasTentativas);
+                finalFechaTentativa = fechasTentativas.length > 0 ? new Date(fechasTentativas[0]) : null;
+            } else {
+                finalFechasTentativas = null;
+                finalFechaTentativa = null;
+            }
+        } else if (fechaTentativa !== undefined) {
+            finalFechaTentativa = fechaTentativa ? new Date(fechaTentativa) : null;
+            finalFechasTentativas = fechaTentativa ? JSON.stringify([fechaTentativa]) : null;
+        }
+
+        const updateData: any = {};
+        if (obraId !== undefined) updateData.obraId = obraId;
+        if (ciudad !== undefined) updateData.ciudad = ciudad;
+        if (pais !== undefined) updateData.pais = pais;
+        if (finalFechaTentativa !== undefined) updateData.fechaTentativa = finalFechaTentativa;
+        if (finalFechasTentativas !== undefined) updateData.fechasTentativas = finalFechasTentativas;
+        if (salaNombre !== undefined) updateData.salaNombre = salaNombre || null;
+        if (contactoNombre !== undefined) updateData.contactoNombre = contactoNombre || null;
+        if (contactoEmail !== undefined) updateData.contactoEmail = contactoEmail || null;
+        if (contactoTel !== undefined) updateData.contactoTel = contactoTel || null;
+        if (acuerdoTipo !== undefined) updateData.acuerdoTipo = acuerdoTipo || null;
+        if (acuerdoPorcentaje !== undefined) {
+            updateData.acuerdoPorcentaje = acuerdoPorcentaje != null ? Number(acuerdoPorcentaje) : null;
+        }
+        if (acuerdoSobre !== undefined) updateData.acuerdoSobre = acuerdoSobre || null;
+        if (acuerdoMonto !== undefined) {
+            updateData.acuerdoMonto = acuerdoMonto != null ? Number(acuerdoMonto) : null;
+        }
+        if (estado !== undefined) updateData.estado = estado;
+        if (notas !== undefined) updateData.notas = notas || null;
+        if (funcionId !== undefined) updateData.funcionId = funcionId || null;
+
+        const proyecto = await prisma.fechaProspecto.update({
+            where: { id: id as string },
+            data: updateData
+        });
+
+        res.json(proyecto);
+    } catch (error: any) {
+        console.error('Error updating agent proyecto:', error);
+        res.status(500).json({ error: 'Error al actualizar el proyecto via agent', details: error.message || String(error) });
+    }
+};
+
+export const createAgentObra = async (req: AuthRequest, res: Response) => {
+    const {
+        nombre,
+        artistaPrincipal,
+        descripcion,
+        estado,
+        fechaEstreno,
+        driveFolderId,
+        metaCampaignId,
+        productorEjecutivoId,
+        artistaPayouts,
+        deducciones,
+        socios,
+        artistas
+    } = req.body;
+
+    if (!nombre || !artistaPrincipal || !estado) {
+        return res.status(400).json({ error: 'Missing required fields: nombre, artistaPrincipal, estado' });
+    }
+
+    try {
+        const prodId = productorEjecutivoId || req.user!.id;
+        const obra = await prisma.obra.create({
+            data: {
+                nombre,
+                artistaPrincipal,
+                descripcion: descripcion || null,
+                estado,
+                fechaEstreno: fechaEstreno ? new Date(fechaEstreno) : null,
+                driveFolderId: driveFolderId || null,
+                metaCampaignId: metaCampaignId || null,
+                productorEjecutivoId: prodId,
+                artistaPayouts: {
+                    create: artistaPayouts?.map((p: any) => ({
+                        nombre: p.nombre,
+                        porcentaje: Number(p.porcentaje) || 0,
+                        base: p.base
+                    })) || []
+                },
+                deducciones: {
+                    create: deducciones?.map((d: any) => ({
+                        nombre: d.nombre,
+                        porcentaje: d.porcentaje != null ? Number(d.porcentaje) : null,
+                        monto: d.monto != null ? Number(d.monto) : null,
+                        deduceAntesDeSala: d.deduceAntesDeSala ?? true
+                    })) || []
+                },
+                socios: {
+                    create: socios?.map((s: any) => ({
+                        nombre: s.nombre,
+                        porcentaje: Number(s.porcentaje) || 0
+                    })) || []
+                },
+                artistas: {
+                    connect: artistas?.map((id: string) => ({ id })) || []
+                }
+            },
+            include: { artistaPayouts: true, deducciones: true, socios: true, artistas: true }
+        }) as any;
+
+        // Automated Drive Folder Creation (non-blocking)
+        try {
+            const { createObraDriveFolder } = await import('../services/googleService.js');
+            await createObraDriveFolder(prodId, obra.id);
+        } catch (error) {
+            console.warn('Auto-sync Drive failed:', error);
+        }
+
+        res.status(201).json(obra);
+    } catch (error: any) {
+        console.error('Agent create obra error:', error);
+        res.status(500).json({ error: 'Error creating obra via agent', details: error.message || String(error) });
+    }
+};
+
+export const updateAgentObra = async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Missing obra ID' });
+
+    const {
+        nombre,
+        artistaPrincipal,
+        descripcion,
+        estado,
+        fechaEstreno,
+        driveFolderId,
+        metaCampaignId,
+        productorEjecutivoId,
+        artistaPayouts,
+        deducciones,
+        socios,
+        artistas
+    } = req.body;
+
+    try {
+        const obra = await prisma.$transaction(async (tx) => {
+            const updateData: any = {};
+            if (nombre !== undefined) updateData.nombre = nombre;
+            if (artistaPrincipal !== undefined) updateData.artistaPrincipal = artistaPrincipal;
+            if (descripcion !== undefined) updateData.descripcion = descripcion;
+            if (estado !== undefined) updateData.estado = estado;
+            if (fechaEstreno !== undefined) updateData.fechaEstreno = fechaEstreno ? new Date(fechaEstreno) : null;
+            if (driveFolderId !== undefined) updateData.driveFolderId = driveFolderId;
+            if (metaCampaignId !== undefined) updateData.metaCampaignId = metaCampaignId;
+            if (productorEjecutivoId !== undefined) updateData.productorEjecutivoId = productorEjecutivoId;
+            if (artistas !== undefined) {
+                updateData.artistas = {
+                    set: artistas.map((id: string) => ({ id }))
+                };
+            }
+
+            const updatedObra = await tx.obra.update({
+                where: { id: id as string },
+                data: updateData,
+            });
+
+            // Update payouts
+            if (artistaPayouts !== undefined) {
+                await tx.artistaPayout.deleteMany({ where: { obraId: id as string } });
+                if (artistaPayouts && artistaPayouts.length > 0) {
+                    await tx.artistaPayout.createMany({
+                        data: artistaPayouts.map((p: any) => ({
+                            obraId: id as string,
+                            nombre: p.nombre,
+                            porcentaje: Number(p.porcentaje) || 0,
+                            base: p.base
+                        }))
+                    });
+                }
+            }
+
+            // Update deductions
+            if (deducciones !== undefined) {
+                await tx.obraDeduccion.deleteMany({ where: { obraId: id as string } });
+                if (deducciones && deducciones.length > 0) {
+                    await tx.obraDeduccion.createMany({
+                        data: deducciones.map((d: any) => ({
+                            obraId: id as string,
+                            nombre: d.nombre,
+                            porcentaje: d.porcentaje != null ? Number(d.porcentaje) : null,
+                            monto: d.monto != null ? Number(d.monto) : null,
+                            deduceAntesDeSala: d.deduceAntesDeSala ?? true
+                        }))
+                    });
+                }
+            }
+
+            // Update socios
+            if (socios !== undefined) {
+                await tx.obraSocio.deleteMany({ where: { obraId: id as string } });
+                if (socios && socios.length > 0) {
+                    await tx.obraSocio.createMany({
+                        data: socios.map((s: any) => ({
+                            obraId: id as string,
+                            nombre: s.nombre,
+                            porcentaje: Number(s.porcentaje) || 0
+                        }))
+                    });
+                }
+            }
+
+            return tx.obra.findUnique({
+                where: { id: id as string },
+                include: { artistaPayouts: true, deducciones: true, socios: true, artistas: true }
+            });
+        });
+
+        res.json(obra);
+    } catch (error: any) {
+        console.error('Agent update obra error:', error);
+        res.status(500).json({ error: 'Error updating obra via agent', details: error.message || String(error) });
     }
 };

@@ -15,6 +15,9 @@ import {
     runMigration,
     getAgentProyectos,
     createAgentProyecto,
+    updateAgentProyecto,
+    createAgentObra,
+    updateAgentObra,
 } from '../controllers/agent.js';
 import { agentAuthenticate } from '../middleware/agentAuth.js';
 
@@ -32,6 +35,7 @@ router.post('/run-migration', runMigration);
 // Proyectos (Programación)
 router.get('/proyectos', getAgentProyectos);
 router.post('/proyectos', createAgentProyecto);
+router.put('/proyectos/:id', updateAgentProyecto);
 
 // Funciones
 router.get('/funciones', getAgentFunciones);
@@ -44,6 +48,8 @@ router.put('/funciones/:id', updateAgentFuncion);
 router.get('/obras/:id/evolucion-ventas', getAgentObraEvolucionVentas);
 router.get('/obras/:id/gastos', getAgentGastosByObra);
 router.get('/obras/:id', getAgentObraDetalle);
+router.post('/obras', createAgentObra);
+router.put('/obras/:id', updateAgentObra);
 
 // Liquidaciones
 router.get('/funciones/:id/liquidacion', getAgentLiquidacion);
