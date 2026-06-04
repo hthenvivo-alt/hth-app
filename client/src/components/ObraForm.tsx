@@ -23,6 +23,12 @@ interface ObraDeduccion {
     deduceAntesDeSala: boolean;
 }
 
+interface ObraSocio {
+    id?: string;
+    nombre: string;
+    porcentaje: number | '';
+}
+
 const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel }) => {
     const [formData, setFormData] = useState({
         nombre: '',
@@ -33,6 +39,7 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
     });
     const [artistaPayouts, setArtistaPayouts] = useState<ArtistaPayout[]>([]);
     const [deducciones, setDeducciones] = useState<ObraDeduccion[]>([]);
+    const [socios, setSocios] = useState<ObraSocio[]>([]);
     const [selectedArtistas, setSelectedArtistas] = useState<string[]>([]);
     const [availableArtistas, setAvailableArtistas] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -64,6 +71,12 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
                     porcentaje: d.porcentaje ? Number(d.porcentaje) : '',
                     monto: d.monto ? Number(d.monto) : '',
                     deduceAntesDeSala: d.deduceAntesDeSala ?? true
+                })));
+            }
+            if (initialData.socios) {
+                setSocios(initialData.socios.map((s: any) => ({
+                    ...s,
+                    porcentaje: Number(s.porcentaje)
                 })));
             }
             if (initialData.artistas) {
@@ -100,6 +113,23 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
         setDeducciones(newDeds);
     };
 
+    const addSocio = () => {
+        setSocios([...socios, { nombre: '', porcentaje: '' }]);
+    };
+
+    const removeSocio = (index: number) => {
+        setSocios(socios.filter((_, i) => i !== index));
+    };
+
+    const updateSocio = (index: number, field: keyof ObraSocio, value: any) => {
+        const newSocios = [...socios];
+        newSocios[index] = { ...newSocios[index], [field]: value };
+        setSocios(newSocios);
+    };
+
+    const totalPorcentajeSocios = socios.reduce((acc, s) => acc + (Number(s.porcentaje) || 0), 0);
+    const porcentajeHTH = Math.max(0, 100 - totalPorcentajeSocios);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -116,8 +146,20 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
                 porcentaje: d.porcentaje === '' ? null : Number(d.porcentaje),
                 monto: d.monto === '' ? null : Number(d.monto)
             })),
+            socios: socios
+                .filter(s => s.nombre.trim() !== '')
+                .map(s => ({
+                    nombre: s.nombre,
+                    porcentaje: Number(s.porcentaje) || 0
+                })),
             artistas: selectedArtistas
         };
+
+        if (totalPorcentajeSocios > 100) {
+            setError('Los porcentajes de socios no pueden superar el 100%');
+            setLoading(false);
+            return;
+        }
 
         try {
             if (initialData?.id) {
@@ -275,6 +317,81 @@ const ObraForm: React.FC<ObraFormProps> = ({ initialData, onSuccess, onCancel })
                                         <button
                                             type="button"
                                             onClick={() => removeArtista(idx)}
+                                            className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Socios del Resultado Section */}
+                <div className="md:col-span-2 p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
+                    <div className="flex justify-between items-center mb-2">
+                        <div>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-primary-500">Socios del Resultado</h3>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Personas que participan del resultado económico final</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={addSocio}
+                            className="text-xs py-1 px-3 bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 border border-primary-500/20 rounded-lg transition-all font-bold"
+                        >
+                            + Agregar Socio
+                        </button>
+                    </div>
+
+                    {/* HTH badge always visible */}
+                    <div className="flex items-center justify-between p-3 bg-primary-500/5 border border-primary-500/10 rounded-xl">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-primary-500" />
+                            <span className="text-xs font-black text-primary-400 uppercase tracking-widest">HTH Productora</span>
+                        </div>
+                        <span className={`text-sm font-black ${totalPorcentajeSocios > 100 ? 'text-red-500' : 'text-white'}`}>
+                            {porcentajeHTH.toFixed(0)}%
+                        </span>
+                    </div>
+
+                    {totalPorcentajeSocios > 100 && (
+                        <p className="text-xs text-red-400 font-bold">⚠ Los porcentajes de socios superan el 100%. Ajustá los valores.</p>
+                    )}
+
+                    {socios.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic">Sin socios externos — HTH es el único propietario (100%).</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {socios.map((s, idx) => (
+                                <div key={idx} className="grid grid-cols-12 gap-3 items-end bg-white/5 p-4 rounded-xl border border-white/5">
+                                    <div className="col-span-8">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nombre del Socio</label>
+                                        <input
+                                            type="text"
+                                            value={s.nombre}
+                                            onChange={(e) => updateSocio(idx, 'nombre', e.target.value)}
+                                            className="w-full bg-transparent border-b border-white/10 text-sm focus:border-primary-500 outline-none transition-all pb-1"
+                                            placeholder="Ej: Juan García"
+                                        />
+                                    </div>
+                                    <div className="col-span-3">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">% del Resultado</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            step="0.5"
+                                            value={s.porcentaje}
+                                            onChange={(e) => updateSocio(idx, 'porcentaje', e.target.value)}
+                                            className="w-full bg-transparent border-b border-white/10 text-sm focus:border-primary-500 outline-none transition-all pb-1 text-center"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="col-span-1 flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() => removeSocio(idx)}
                                             className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>

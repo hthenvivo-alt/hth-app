@@ -1211,6 +1211,49 @@ const LiquidacionDetalle: React.FC = () => {
                 </div>
             </div>
 
+            {/* Socios del Resultado */}
+            {funcion?.obra && (
+                <div className="bg-[#1E1E1E] p-6 rounded-2xl border border-white/5 mt-8">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-primary-500 mb-4 flex items-center gap-2">
+                        <Percent size={16} />
+                        Reparto de Socios — Resultado Final
+                    </h3>
+                    {(() => {
+                        const socios: any[] = funcion?.obra?.socios || [];
+                        const resultado = repartoProduccionMonto;
+                        const totalSociosPct = socios.reduce((acc: number, s: any) => acc + (Number(s.porcentaje) || 0), 0);
+                        const hthPct = Math.max(0, 100 - totalSociosPct);
+                        return (
+                            <div className="space-y-2">
+                                {/* HTH row */}
+                                <div className="flex justify-between items-center p-3 bg-primary-500/5 border border-primary-500/10 rounded-xl">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-primary-500" />
+                                        <span className="text-xs font-black text-primary-400 uppercase tracking-widest">HTH Productora</span>
+                                        <span className="text-[10px] text-gray-500">{hthPct.toFixed(0)}%</span>
+                                    </div>
+                                    <span className="text-sm font-black text-white">{symbol} {Math.round(resultado * hthPct / 100).toLocaleString('es-AR')}</span>
+                                </div>
+                                {/* Socios rows */}
+                                {socios.map((s: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between items-center p-3 bg-white/5 border border-white/5 rounded-xl">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-gray-400" />
+                                            <span className="text-xs font-black text-white uppercase tracking-widest">{s.nombre}</span>
+                                            <span className="text-[10px] text-gray-500">{Number(s.porcentaje).toFixed(0)}%</span>
+                                        </div>
+                                        <span className="text-sm font-black text-gray-300">{symbol} {Math.round(resultado * Number(s.porcentaje) / 100).toLocaleString('es-AR')}</span>
+                                    </div>
+                                ))}
+                                {socios.length === 0 && (
+                                    <p className="text-xs text-gray-500 italic">Sin socios externos — HTH es el único propietario (100%).</p>
+                                )}
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
+
             {/* Sticky Action Bar */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#121212] border-t border-white/10 z-50">
                 <div className="max-w-5xl mx-auto flex justify-between items-center">

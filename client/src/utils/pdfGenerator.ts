@@ -367,46 +367,75 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
 
     y += 55;
 
-    // SECTION 5: REPARTO RESUMIDO
-    doc.setTextColor(0, 0, 0);
+    // SECTION 5: REPARTO DE SOCIOS — RESULTADO FINAL
+    const socios: any[] = funcion.obra?.socios || [];
+    const totalSociosPct = socios.reduce((acc: number, s: any) => acc + (Number(s.porcentaje) || 0), 0);
+    const hthPct = Math.max(0, 100 - totalSociosPct);
+    const resultado = Number(liqData.repartoProduccionMonto) || 0;
+
+    if (y > 230) {
+        doc.addPage();
+        y = 20;
+    }
+    doc.setTextColor(primary[0], primary[1], primary[2]);
     doc.setFontSize(12);
-    const isRevenueOnly = liqData.repartos.length > 0 && !liqData.repartos.some((r: any) => r.base === 'Utilidad');
-    doc.text(isRevenueOnly ? 'PORCENTAJE ARTISTAS' : 'RESUMEN DE REPARTO', 15, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REPARTO DE SOCIOS — RESULTADO FINAL', 15, y);
     y += 8;
 
-    // Calculate HTH Share %
-    // If we have utility payouts, HTH share is the remainder of 100 - sum(payouts)
-    // If we have revenue payouts only, HTH gets the "result" which is effectively 100% of the untaxed profit (or whatever is left)
-
-    let hthLabel = '';
-    if (isRevenueOnly) {
-        hthLabel = '100% (Remanente)';
-    } else {
-        const totalUtilityPercent = liqData.repartos
-            .filter((r: any) => r.base === 'Utilidad')
-            .reduce((acc: number, r: any) => acc + (Number(r.porcentaje) || 0), 0);
-        const hthPercent = Math.max(0, 100 - totalUtilityPercent);
-        hthLabel = `${hthPercent}% s/ Utilidad`;
-    }
-
-    const repartoRows = [
-        ...liqData.repartos.map((r: any) => [
-            r.nombreArtista.toUpperCase(),
-            `${r.porcentaje}% s/ ${r.base}${r.aplicaAAA ? ' (+ AAA)' : ''}`,
-            { content: fmt(r.monto), styles: { fontStyle: 'bold' } }
-        ]),
-        ['HTH GESTIÓN / PRODUCCIÓN', hthLabel, { content: fmt(liqData.repartoProduccionMonto), styles: { fontStyle: 'bold' } }]
+    const sociosRows = [
+        ['HTH GESTIÓN / PRODUCCIÓN', `${hthPct.toFixed(0)}%`, { content: fmt(resultado * hthPct / 100), styles: { fontStyle: 'bold' } }],
+        ...socios.map((s: any) => [
+            s.nombre.toUpperCase(),
+            `${Number(s.porcentaje).toFixed(0)}%`,
+            { content: fmt(resultado * Number(s.porcentaje) / 100), styles: { fontStyle: 'bold' } }
+        ])
     ];
 
     autoTable(doc, {
         startY: y,
-        body: repartoRows,
+        head: [['Socio / Participante', 'Porcentaje', 'Monto']],
+        body: sociosRows,
         theme: 'grid',
-        styles: { cellPadding: 5 },
+        headStyles: { fillColor: dark as any },
         columnStyles: {
             2: { halign: 'right' }
         }
     });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION 5A: PORCENTAJE ARTISTAS / RESUMEN DE REPARTO
+    if (liqData.repartos && liqData.repartos.length > 0) {
+        if (y > 230) {
+            doc.addPage();
+            y = 20;
+        }
+        doc.setTextColor(primary[0], primary[1], primary[2]);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        const isRevenueOnly = !liqData.repartos.some((r: any) => r.base === 'Utilidad');
+        doc.text(isRevenueOnly ? 'PORCENTAJE ARTISTAS' : 'RESUMEN DE REPARTO', 15, y);
+        y += 8;
+
+        const repartoRows = liqData.repartos.map((r: any) => [
+            r.nombreArtista.toUpperCase(),
+            `${r.porcentaje}% s/ ${r.base}${r.aplicaAAA ? ' (+ AAA)' : ''}`,
+            { content: fmt(r.monto), styles: { fontStyle: 'bold' } }
+        ]);
+
+        autoTable(doc, {
+            startY: y,
+            head: [['Beneficiario', 'Base / Condición', 'Monto']],
+            body: repartoRows,
+            theme: 'grid',
+            headStyles: { fillColor: dark as any },
+            columnStyles: {
+                2: { halign: 'right' }
+            }
+        });
+        y = (doc as any).lastAutoTable.finalY + 15;
+    }
 
 
     // SECTION 5B: DETALLE DE GASTOS DE CAJA (REGISTRO)
@@ -781,32 +810,72 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
 
     y += 60;
 
-    // 5) DIVISIÓN HTH Y ARTISTA
-    if (y > 230) { doc.addPage(); y = 20; }
+    // 5) REPARTO DE SOCIOS — RESULTADO FINAL
+    const socios: any[] = grupal.liquidaciones?.[0]?.funcion?.obra?.socios || [];
+    const totalSociosPct = socios.reduce((acc: number, s: any) => acc + (Number(s.porcentaje) || 0), 0);
+    const hthPct = Math.max(0, 100 - totalSociosPct);
+    const resultado = Number(grupal.finalBalance) || 0;
+
+    if (y > 230) {
+        doc.addPage();
+        y = 20;
+    }
     doc.setTextColor(primary[0], primary[1], primary[2]);
     doc.setFontSize(12);
-    const isRevenueOnlyGrupal = (grupal.consolidatedRepartos || []).length > 0 && !(grupal.consolidatedRepartos || []).some((r: any) => r.base === 'Utilidad');
-    doc.text(isRevenueOnlyGrupal ? 'PORCENTAJE ARTISTAS' : 'REPARTO Y DIVISIÓN DE RESULTADOS', 15, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REPARTO DE SOCIOS — RESULTADO FINAL', 15, y);
     y += 8;
 
-    const hthPercent = resultPeriodo > 0 ? (Number(grupal.finalBalance) / resultPeriodo) * 100 : 0;
+    const sociosRows = [
+        ['HTH PRODUCTORA', `${hthPct.toFixed(0)}%`, { content: fmt(resultado * hthPct / 100), styles: { fontStyle: 'bold' } }],
+        ...socios.map((s: any) => [
+            s.nombre.toUpperCase(),
+            `${Number(s.porcentaje).toFixed(0)}%`,
+            { content: fmt(resultado * Number(s.porcentaje) / 100), styles: { fontStyle: 'bold' } }
+        ])
+    ];
 
     autoTable(doc, {
         startY: y,
-        head: [['Beneficiario', 'Base', 'Monto Bruto / Retenciones', 'Saldo Neto']],
-        body: [
-            ...(grupal.consolidatedRepartos || []).map((r: any) => [
+        head: [['Socio / Participante', 'Porcentaje', 'Monto']],
+        body: sociosRows,
+        theme: 'grid',
+        headStyles: { fillColor: dark as any },
+        columnStyles: {
+            2: { halign: 'right' }
+        }
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // 5B) PORCENTAJE ARTISTAS
+    if (grupal.consolidatedRepartos && grupal.consolidatedRepartos.length > 0) {
+        if (y > 230) {
+            doc.addPage();
+            y = 20;
+        }
+        doc.setTextColor(primary[0], primary[1], primary[2]);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        const isRevenueOnlyGrupal = !grupal.consolidatedRepartos.some((r: any) => r.base === 'Utilidad');
+        doc.text(isRevenueOnlyGrupal ? 'PORCENTAJE ARTISTAS' : 'REPARTO Y DIVISIÓN DE RESULTADOS', 15, y);
+        y += 8;
+
+        autoTable(doc, {
+            startY: y,
+            head: [['Beneficiario', 'Base / Condición', 'Monto Bruto / Retenciones', 'Saldo Neto']],
+            body: grupal.consolidatedRepartos.map((r: any) => [
                 `${r.nombreArtista.toUpperCase()} (${r.porcentaje}%)`,
                 r.base,
                 `${fmt(r.monto)} ${r.retencionAAA > 0 ? `(AAA: -${fmt(r.retencionAAA)})` : ''}`,
                 { content: fmt(r.monto - (r.retencionAAA || 0)), styles: { fontStyle: 'bold' } }
             ]),
-            [{ content: `HTH (${hthPercent.toFixed(1)}%)`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }, '-', { content: fmt(grupal.finalBalance), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: dark as any },
-        columnStyles: { 3: { halign: 'right' } }
-    });
+            theme: 'grid',
+            headStyles: { fillColor: dark as any },
+            columnStyles: { 3: { halign: 'right' } }
+        });
+        y = (doc as any).lastAutoTable.finalY + 15;
+    }
 
     // --- 6) PÁGINAS INDIVIDUALES POR ARTISTA ---
     for (const r of (grupal.consolidatedRepartos || [])) {

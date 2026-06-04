@@ -714,6 +714,49 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                     </div>
                 </section>
 
+                {/* Socios del Resultado */}
+                {(() => {
+                    const socios: any[] = grupal.liquidaciones?.[0]?.funcion?.obra?.socios || [];
+                    const resultado = Math.round(finalBalanceReal);
+                    const totalSociosPct = socios.reduce((acc: number, s: any) => acc + (Number(s.porcentaje) || 0), 0);
+                    const hthPct = Math.max(0, 100 - totalSociosPct);
+                    return (
+                        <section>
+                            <div className="flex items-center gap-3 mb-6">
+                                <TrendingUp size={20} className="text-gray-500" />
+                                <h2 className="text-sm font-black uppercase tracking-widest text-gray-500">Reparto de Socios — Resultado Final</h2>
+                            </div>
+                            <div className="bg-[#121212] border border-white/5 rounded-3xl overflow-hidden p-8 shadow-xl">
+                                <div className="space-y-3">
+                                    {/* HTH row */}
+                                    <div className="flex justify-between items-center p-4 bg-primary-500/5 border border-primary-500/10 rounded-2xl">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-primary-500" />
+                                            <span className="text-sm font-black text-primary-400 uppercase tracking-widest">HTH Productora</span>
+                                            <span className="text-xs text-gray-500">{hthPct.toFixed(0)}%</span>
+                                        </div>
+                                        <span className="text-xl font-black text-white">{S} {Math.round(resultado * hthPct / 100).toLocaleString('es-AR')}</span>
+                                    </div>
+                                    {/* Socios rows */}
+                                    {socios.map((s: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center p-4 bg-white/5 border border-white/5 rounded-2xl">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-gray-400" />
+                                                <span className="text-sm font-black text-white uppercase tracking-widest">{s.nombre}</span>
+                                                <span className="text-xs text-gray-500">{Number(s.porcentaje).toFixed(0)}%</span>
+                                            </div>
+                                            <span className="text-xl font-black text-gray-300">{S} {Math.round(resultado * Number(s.porcentaje) / 100).toLocaleString('es-AR')}</span>
+                                        </div>
+                                    ))}
+                                    {socios.length === 0 && (
+                                        <p className="text-xs text-gray-500 italic">Sin socios externos — HTH es el único propietario (100%).</p>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+                    );
+                })()}
+
                 {/* 5. Desglose General (At the Bottom) */}
                 <section>
                     <div className="flex items-center gap-3 mb-6">

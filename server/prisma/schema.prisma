@@ -52,9 +52,20 @@ model Obra {
   gastos               Gasto[]
   productorEjecutivo   User             @relation("ProductorEjecutivo", fields: [productorEjecutivoId], references: [id], onDelete: Cascade)
   deducciones          ObraDeduccion[]
+  socios               ObraSocio[]
   artistas             User[]           @relation("ArtistasEnObras")
   simulaciones         SimulacionLiquidacion[]
   prospectos           FechaProspecto[]
+}
+
+model ObraSocio {
+  id         String   @id @default(uuid())
+  obraId     String
+  nombre     String
+  porcentaje Decimal  @db.Decimal(5, 2)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  obra       Obra     @relation(fields: [obraId], references: [id], onDelete: Cascade)
 }
 
 model ObraDeduccion {

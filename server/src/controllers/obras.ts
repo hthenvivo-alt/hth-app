@@ -11,6 +11,7 @@ export const getObras = async (req: AuthRequest, res: Response) => {
                 },
                 artistaPayouts: true,
                 deducciones: true,
+                socios: true,
                 artistas: {
                     select: { id: true, nombre: true, apellido: true, email: true }
                 }
@@ -23,7 +24,7 @@ export const getObras = async (req: AuthRequest, res: Response) => {
 };
 
 export const createObra = async (req: AuthRequest, res: Response) => {
-    const { nombre, artistaPrincipal, descripcion, estado, fechaEstreno, artistaPayouts, deducciones, artistas } = req.body;
+    const { nombre, artistaPrincipal, descripcion, estado, fechaEstreno, artistaPayouts, deducciones, socios, artistas } = req.body;
 
     try {
         const obra = await prisma.obra.create({
@@ -49,11 +50,17 @@ export const createObra = async (req: AuthRequest, res: Response) => {
                         deduceAntesDeSala: d.deduceAntesDeSala ?? true
                     })) || []
                 },
+                socios: {
+                    create: socios?.map((s: any) => ({
+                        nombre: s.nombre,
+                        porcentaje: Number(s.porcentaje) || 0
+                    })) || []
+                },
                 artistas: {
                     connect: artistas?.map((id: string) => ({ id })) || []
                 }
             },
-            include: { artistaPayouts: true, deducciones: true, artistas: true }
+            include: { artistaPayouts: true, deducciones: true, socios: true, artistas: true }
         });
 
         // Automated Drive Folder Creation (non-blocking)
@@ -73,7 +80,7 @@ export const createObra = async (req: AuthRequest, res: Response) => {
 
 export const updateObra = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { nombre, artistaPrincipal, descripcion, estado, fechaEstreno, artistaPayouts, deducciones, artistas } = req.body;
+    const { nombre, artistaPrincipal, descripcion, estado, fechaEstreno, artistaPayouts, deducciones, socios, artistas } = req.body;
 
     try {
         // Use a transaction to ensure atomic update of obra and its payouts
@@ -126,9 +133,24 @@ export const updateObra = async (req: Request, res: Response) => {
                 });
             }
 
+            // Update socios: delete old and create new
+            await tx.obraSocio.deleteMany({
+                where: { obraId: id as string }
+            });
+
+            if (socios && socios.length > 0) {
+                await tx.obraSocio.createMany({
+                    data: socios.map((s: any) => ({
+                        obraId: id as string,
+                        nombre: s.nombre,
+                        porcentaje: Number(s.porcentaje) || 0
+                    }))
+                });
+            }
+
             return tx.obra.findUnique({
                 where: { id: id as string },
-                include: { artistaPayouts: true, deducciones: true, artistas: true }
+                include: { artistaPayouts: true, deducciones: true, socios: true, artistas: true }
             });
         });
 

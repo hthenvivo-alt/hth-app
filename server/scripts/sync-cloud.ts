@@ -130,6 +130,19 @@ async function sync() {
                     ALTER TABLE "Invitado" ADD CONSTRAINT "Invitado_funcionId_fkey"
                     FOREIGN KEY ("funcionId") REFERENCES "Funcion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
                 END IF;
+            END $$`,
+            `CREATE TABLE IF NOT EXISTS "ObraSocio" (
+                "id" TEXT NOT NULL, "obraId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+                "porcentaje" DECIMAL(5,2) NOT NULL,
+                "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "ObraSocio_pkey" PRIMARY KEY ("id")
+            )`,
+            `DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ObraSocio_obraId_fkey') THEN
+                    ALTER TABLE "ObraSocio" ADD CONSTRAINT "ObraSocio_obraId_fkey"
+                    FOREIGN KEY ("obraId") REFERENCES "Obra"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+                END IF;
             END $$`
         ];
         for (const stmt of schemaStatements) {
@@ -158,6 +171,7 @@ async function sync() {
         await safeDelete('Documento');
         await safeDelete('ArtistaPayout');
         await safeDelete('ObraDeduccion');
+        await safeDelete('ObraSocio');
         await safeDelete('Funcion');
         await safeDelete('Obra');
         await safeDelete('SimulacionReparto');
@@ -185,6 +199,9 @@ async function sync() {
         }
         if (data.artistaPayouts?.length) {
             await safeCreate('artistaPayouts', () => prisma.artistaPayout.createMany({ data: data.artistaPayouts }), data.artistaPayouts.length);
+        }
+        if (data.obraSocios?.length) {
+            await safeCreate('obraSocios', () => prisma.obraSocio.createMany({ data: data.obraSocios }), data.obraSocios.length);
         }
         if (data.logisticaRutas?.length) {
             await safeCreate('logisticaRutas', () => prisma.logisticaRuta.createMany({ data: data.logisticaRutas }), data.logisticaRutas.length);

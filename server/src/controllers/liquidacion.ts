@@ -613,7 +613,7 @@ export const getLiquidacionGrupal = async (req: AuthRequest, res: Response) => {
                 liquidaciones: {
                     include: {
                         funcion: {
-                            include: { obra: { include: { artistaPayouts: true } } }
+                            include: { obra: { include: { artistaPayouts: true, socios: true } } }
                         },
                         items: true,
                         repartos: true,
