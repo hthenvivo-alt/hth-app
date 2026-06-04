@@ -488,8 +488,10 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                                     .map((l: any) => {
                                         const derivedRecaudacionBruta = (Number(l.facturacionTotal) || 0) - (Number(l.costosVenta) || 0);
                                         const recNeta = Number(l.recaudacionNeta) || 0;
-                                        const costoSala = derivedRecaudacionBruta - recNeta;
                                         const deducciones = (l.items || []).filter((i: any) => i.tipo === 'Deduccion').reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
+                                        // costoSala = recNeta - resultadoCompania
+                                        // (en la liq individual: resultadoCompania = recNeta - montoAcuerdo)
+                                        const costoSala = recNeta - (Number(l.resultadoCompania) || 0);
                                         return (
                                             <tr key={l.id} className="group hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => navigate(`/liquidacion/${l.funcion.id}?from=grupal&grupalId=${id}`)}>
                                                 <td className="px-6 py-5">

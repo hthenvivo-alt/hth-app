@@ -12,6 +12,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "seed": "tsx src/seed.ts",
+    "sync-db": "tsx scripts/sync-cloud.ts",
     "postinstall": "prisma generate"
   },
   "keywords": [],
