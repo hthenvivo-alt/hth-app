@@ -18,8 +18,9 @@ export const getObras = async (req: AuthRequest, res: Response) => {
             }
         });
         res.json(obras);
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching obras' });
+    } catch (error: any) {
+        console.error("Error in getObras:", error);
+        res.status(500).json({ error: 'Error fetching obras', details: error.message || String(error) });
     }
 };
 
