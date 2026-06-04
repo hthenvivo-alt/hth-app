@@ -22,7 +22,8 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
             liquidacionGrupales, liquidacionGrupalItems,
             liquidacionItems, liquidacionRepartos,
             simulaciones, escenarios, categorias,
-            simGastos, simDeducciones, simRepartos
+            simGastos, simDeducciones, simRepartos,
+            obraSocios
         ] = await Promise.all([
             prisma.user.findMany(),
             prisma.obra.findMany(),
@@ -46,7 +47,8 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
             prisma.simulacionCategoria.findMany(),
             prisma.simulacionGasto.findMany(),
             prisma.simulacionDeduccion.findMany(),
-            prisma.simulacionReparto.findMany()
+            prisma.simulacionReparto.findMany(),
+            prisma.obraSocio.findMany()
         ]);
 
         const backupData = {
@@ -77,7 +79,8 @@ export const createBackup = async (req?: AuthRequest, res?: Response) => {
                 categorias,
                 simGastos,
                 simDeducciones,
-                simRepartos
+                simRepartos,
+                obraSocios
             }
         };
 
@@ -216,6 +219,19 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
                     ALTER TABLE "Invitado" ADD CONSTRAINT "Invitado_funcionId_fkey"
                     FOREIGN KEY ("funcionId") REFERENCES "Funcion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
                 END IF;
+            END $$`,
+            `CREATE TABLE IF NOT EXISTS "ObraSocio" (
+                "id" TEXT NOT NULL, "obraId" TEXT NOT NULL, "nombre" TEXT NOT NULL,
+                "porcentaje" DECIMAL(5,2) NOT NULL,
+                "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT "ObraSocio_pkey" PRIMARY KEY ("id")
+            )`,
+            `DO $$ BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ObraSocio_obraId_fkey') THEN
+                    ALTER TABLE "ObraSocio" ADD CONSTRAINT "ObraSocio_obraId_fkey"
+                    FOREIGN KEY ("obraId") REFERENCES "Obra"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+                END IF;
             END $$`
         ];
         for (const stmt of schemaStatements) {
@@ -244,6 +260,7 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
         await safeDelete('Documento');
         await safeDelete('ArtistaPayout');
         await safeDelete('ObraDeduccion');
+        await safeDelete('ObraSocio');
         await safeDelete('Funcion');
         await safeDelete('Obra');
         await safeDelete('SimulacionReparto');
@@ -269,6 +286,9 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
         }
         if (data.artistaPayouts?.length) {
             await safeCreate('artistaPayouts', () => prisma.artistaPayout.createMany({ data: data.artistaPayouts }), data.artistaPayouts.length);
+        }
+        if (data.obraSocios?.length) {
+            await safeCreate('obraSocios', () => prisma.obraSocio.createMany({ data: data.obraSocios }), data.obraSocios.length);
         }
         if (data.logisticaRutas?.length) {
             await safeCreate('logisticaRutas', () => prisma.logisticaRuta.createMany({ data: data.logisticaRutas }), data.logisticaRutas.length);
@@ -342,8 +362,9 @@ export const restoreBackup = async (req: AuthRequest, res: Response) => {
             obras: await prisma.obra.count(),
             funciones: await prisma.funcion.count(),
             liquidaciones: await prisma.liquidacion.count(),
+            obraSocios: await prisma.obraSocio.count(),
         };
-        log.push(`✓ Final counts: users=${counts.users}, obras=${counts.obras}, funciones=${counts.funciones}, liquidaciones=${counts.liquidaciones}`);
+        log.push(`✓ Final counts: users=${counts.users}, obras=${counts.obras}, funciones=${counts.funciones}, liquidaciones=${counts.liquidaciones}, obraSocios=${counts.obraSocios}`);
 
         if (errors.length > 0) {
             res.json({ message: 'Backup restored with errors', log, errors, counts });
