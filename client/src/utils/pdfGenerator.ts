@@ -550,8 +550,20 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     }
 
     // SECTION 6: COMPROBANTES / VOUCHERS (New Section)
+    const pdfComprobantesToMerge: string[] = [];
+
     if (comprobantes && comprobantes.length > 0) {
         for (const docEntry of comprobantes) {
+            const isDrivePath = docEntry.linkDrive.startsWith('/uploads/drive/');
+            const isImageExt = /\.(jpg|jpeg|jfif|png|webp|gif)$/i.test(docEntry.linkDrive);
+            const isPdfExt = /\.pdf$/i.test(docEntry.linkDrive);
+            const isPdf = isPdfExt || docEntry.nombreDocumento.toLowerCase().endsWith('.pdf') || docEntry.linkDrive.toLowerCase().endsWith('.pdf');
+
+            if (isPdf) {
+                pdfComprobantesToMerge.push(`${getBackendBase()}${docEntry.linkDrive}`);
+                continue;
+            }
+
             doc.addPage();
             doc.setFillColor(dark[0], dark[1], dark[2]);
             doc.rect(0, 0, 210, 20, 'F');
@@ -559,10 +571,6 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
             doc.setFontSize(10);
             doc.text(`COMPROBANTE: ${docEntry.nombreDocumento.toUpperCase()}`, 15, 13);
 
-            // Detect images: known extensions OR Drive proxy paths (which serve correct content-type)
-            const isDrivePath = docEntry.linkDrive.startsWith('/uploads/drive/');
-            const isImageExt = /\.(jpg|jpeg|jfif|png|webp|gif)$/i.test(docEntry.linkDrive);
-            const isPdfExt = /\.pdf$/i.test(docEntry.linkDrive);
             // Drive paths without extensions are treated as images (most comprobantes are images)
             // Unless the document name ends in .pdf
             const isImage = isImageExt || (isDrivePath && !isPdfExt && !/\.pdf$/i.test(docEntry.nombreDocumento));
@@ -611,26 +619,47 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
         }
     }
 
-
-
     addFooter(doc);
-
 
     const finalFileName = `Liquidacion_${obraNombre.replace(/\s+/g, '_')}_${fechaStr.replace(/\//g, '-')}.pdf`;
 
-    // PDF MERGE LOGIC FOR BORDEREAUX
-    if (bordereauxIsPdf) {
+    // PDF MERGE LOGIC (BORDEREAUX & PDF VOUCHERS)
+    const hasPdfsToMerge = bordereauxIsPdf || pdfComprobantesToMerge.length > 0;
+    if (hasPdfsToMerge) {
         try {
             const reportPdfBytes = doc.output('arraybuffer');
             const reportPdfDoc = await PDFDocument.load(reportPdfBytes);
 
-            const bordereauxUrl = `${getBackendBase()}${liqData.bordereauxImage}`;
-            const response = await fetch(bordereauxUrl);
-            const bordereauxBytes = await response.arrayBuffer();
-            const bordereauxPdfDoc = await PDFDocument.load(bordereauxBytes);
+            // 1. Merge Bordereaux PDF
+            if (bordereauxIsPdf) {
+                try {
+                    const bordereauxUrl = `${getBackendBase()}${liqData.bordereauxImage}`;
+                    const response = await fetch(bordereauxUrl);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const bordereauxBytes = await response.arrayBuffer();
+                    const bordereauxPdfDoc = await PDFDocument.load(bordereauxBytes);
+                    const copiedPages = await reportPdfDoc.copyPages(bordereauxPdfDoc, bordereauxPdfDoc.getPageIndices());
+                    copiedPages.forEach((page) => reportPdfDoc.addPage(page));
+                } catch (err: any) {
+                    console.error('Error merging bordereaux PDF:', err);
+                    alert(`No se pudo anexar el bordereaux PDF (${err.message || 'error de conexión'}).`);
+                }
+            }
 
-            const copiedPages = await reportPdfDoc.copyPages(bordereauxPdfDoc, bordereauxPdfDoc.getPageIndices());
-            copiedPages.forEach((page) => reportPdfDoc.addPage(page));
+            // 2. Merge PDF Vouchers
+            for (const url of pdfComprobantesToMerge) {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const bytes = await response.arrayBuffer();
+                    const voucherPdfDoc = await PDFDocument.load(bytes);
+                    const copiedPages = await reportPdfDoc.copyPages(voucherPdfDoc, voucherPdfDoc.getPageIndices());
+                    copiedPages.forEach((page) => reportPdfDoc.addPage(page));
+                } catch (err: any) {
+                    console.error(`Error merging PDF voucher from ${url}:`, err);
+                    alert(`No se pudo anexar uno de los comprobantes PDF (${err.message || 'error de conexión'}).`);
+                }
+            }
 
             const pdfBytes = await reportPdfDoc.save();
             const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
@@ -643,8 +672,8 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error merging PDF:', error);
-            alert('Error al fusionar el bordereaux PDF. Se descargará solo el reporte.');
+            console.error('Error merging PDFs:', error);
+            alert('Error al fusionar los PDFs adicionales. Se descargará solo el reporte básico.');
             doc.save(finalFileName);
         }
     } else {
