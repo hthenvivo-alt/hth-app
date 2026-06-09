@@ -367,7 +367,48 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
 
     y += 55;
 
-    // SECTION 5: REPARTO DE SOCIOS — RESULTADO FINAL
+    // SECTION 5: RESUMEN DE REPARTO
+    if (y > 230) {
+        doc.addPage();
+        y = 20;
+    }
+    doc.setTextColor(primary[0], primary[1], primary[2]);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMEN DE REPARTO', 15, y);
+    y += 8;
+
+    const repartosList = liqData.repartos || [];
+    const utilityPayouts = repartosList.filter((r: any) => r.base === 'Utilidad');
+    const totalUtilityArtistPct = utilityPayouts.reduce((acc: number, r: any) => acc + (Number(r.porcentaje) || 0), 0);
+    const prodPct = Math.max(0, 100 - totalUtilityArtistPct);
+
+    const repartoRows = [
+        ...repartosList.map((r: any) => [
+            r.nombreArtista.toUpperCase(),
+            `${r.porcentaje}% s/ ${r.base}${r.aplicaAAA ? ' (+ AAA)' : ''}`,
+            { content: fmt(r.monto), styles: { fontStyle: 'bold' } }
+        ]),
+        [
+            'PRODUCCIÓN / HTH',
+            `${prodPct.toFixed(0)}% s/ Utilidad`,
+            { content: fmt(liqData.repartoProduccionMonto), styles: { fontStyle: 'bold' } }
+        ]
+    ];
+
+    autoTable(doc, {
+        startY: y,
+        head: [['Beneficiario', 'Base / Condición', 'Monto']],
+        body: repartoRows,
+        theme: 'grid',
+        headStyles: { fillColor: dark as any },
+        columnStyles: {
+            2: { halign: 'right' }
+        }
+    });
+    y = (doc as any).lastAutoTable.finalY + 15;
+
+    // SECTION 5A: REPARTO DE SOCIOS DE PRODUCCIÓN
     const socios: any[] = funcion.obra?.socios || [];
     const totalSociosPct = socios.reduce((acc: number, s: any) => acc + (Number(s.porcentaje) || 0), 0);
     const hthPct = Math.max(0, 100 - totalSociosPct);
@@ -380,7 +421,7 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     doc.setTextColor(primary[0], primary[1], primary[2]);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('REPARTO DE SOCIOS — RESULTADO FINAL', 15, y);
+    doc.text('REPARTO DE SOCIOS DE PRODUCCIÓN', 15, y);
     y += 8;
 
     const sociosRows = [
@@ -404,38 +445,6 @@ export const generateLiquidacionPDF = async (funcion: any, liqData: any, gastos:
     });
 
     y = (doc as any).lastAutoTable.finalY + 15;
-
-    // SECTION 5A: PORCENTAJE ARTISTAS / RESUMEN DE REPARTO
-    if (liqData.repartos && liqData.repartos.length > 0) {
-        if (y > 230) {
-            doc.addPage();
-            y = 20;
-        }
-        doc.setTextColor(primary[0], primary[1], primary[2]);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        const isRevenueOnly = !liqData.repartos.some((r: any) => r.base === 'Utilidad');
-        doc.text(isRevenueOnly ? 'PORCENTAJE ARTISTAS' : 'RESUMEN DE REPARTO', 15, y);
-        y += 8;
-
-        const repartoRows = liqData.repartos.map((r: any) => [
-            r.nombreArtista.toUpperCase(),
-            `${r.porcentaje}% s/ ${r.base}${r.aplicaAAA ? ' (+ AAA)' : ''}`,
-            { content: fmt(r.monto), styles: { fontStyle: 'bold' } }
-        ]);
-
-        autoTable(doc, {
-            startY: y,
-            head: [['Beneficiario', 'Base / Condición', 'Monto']],
-            body: repartoRows,
-            theme: 'grid',
-            headStyles: { fillColor: dark as any },
-            columnStyles: {
-                2: { halign: 'right' }
-            }
-        });
-        y = (doc as any).lastAutoTable.finalY + 15;
-    }
 
 
     // SECTION 5B: DETALLE DE GASTOS DE CAJA (REGISTRO)
