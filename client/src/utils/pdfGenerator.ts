@@ -829,30 +829,42 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     // 4) CLARIFICACION DEL RESULTADO DEL PERIODO
     if (y > 240) { doc.addPage(); y = 20; }
 
-    const resultPeriodo = totals.ingresoCia - totalGastos;
+    // Artist payouts to include in the final result calculation
+    const totalArtistPayouts = (grupal.consolidatedRepartos || []).reduce((acc: number, r: any) => acc + (Number(r.monto) || 0), 0);
+    const resultPeriodo = totals.ingresoCia - totalGastos - totalArtistPayouts;
 
+    // Expand box height if there are artist payouts to show
+    const boxHeight = totalArtistPayouts > 0 ? 55 : 45;
     doc.setFillColor(dark[0], dark[1], dark[2]);
-    doc.rect(15, y, 180, 45, 'F');
+    doc.rect(15, y, 180, boxHeight, 'F');
     doc.setTextColor(255, 255, 255);
 
     doc.setFontSize(10);
-    doc.text(`Total Ingreso Compañía: ${fmt(totals.ingresoCia)}`, 25, y + 12);
-    doc.text(`Total Gastos Período: - ${fmt(totalGastos)}`, 25, y + 20);
+    doc.setFont('helvetica', 'normal');
+    let boxLineY = y + 12;
+    doc.text(`Ingreso Compañía: ${fmt(totals.ingresoCia)}`, 25, boxLineY);
+    boxLineY += 8;
+    doc.text(`Gastos del Período: - ${fmt(totalGastos)}`, 25, boxLineY);
+    if (totalArtistPayouts > 0) {
+        boxLineY += 8;
+        doc.text(`Reparto Artistas: - ${fmt(totalArtistPayouts)}`, 25, boxLineY);
+    }
+    boxLineY += 5;
 
     doc.setDrawColor(255, 255, 255);
-    doc.line(25, y + 24, 100, y + 24);
+    doc.line(25, boxLineY - 1, 110, boxLineY - 1);
 
-    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(`RESULTADO DEL PERÍODO: ${fmt(resultPeriodo)}`, 25, y + 36);
+    doc.setFontSize(14);
+    doc.text(`RESULTADO DEL PERÍODO: ${fmt(resultPeriodo)}`, 25, boxLineY + 9);
 
-    y += 60;
+    y += boxHeight + 10;
 
     // 5) REPARTO DE SOCIOS — RESULTADO FINAL
     const socios: any[] = grupal.liquidaciones?.[0]?.funcion?.obra?.socios || [];
     const totalSociosPct = socios.reduce((acc: number, s: any) => acc + (Number(s.porcentaje) || 0), 0);
     const hthPct = Math.max(0, 100 - totalSociosPct);
-    const resultado = Number(grupal.finalBalance) || 0;
+    const resultado = resultPeriodo;
 
     if (y > 230) {
         doc.addPage();
