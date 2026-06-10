@@ -796,8 +796,11 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     y = (doc as any).lastAutoTable.finalY + 15;
 
     // 3A) LISTADO DE GASTOS POR FUNCIÓN (from individual shows, isGroupLevel === false)
+    // Use pre-calculated value from screen if available, fallback to filtering allItems
     const expensesByFunction = (grupal.allItems || []).filter((i: any) => i.tipo === 'Gasto' && !i.isGroupLevel);
-    const totalGastosByFunction = expensesByFunction.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
+    const totalGastosByFunction: number = grupal.totalGastosByFunction != null
+        ? Number(grupal.totalGastosByFunction)
+        : expensesByFunction.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
 
     if (expensesByFunction.length > 0) {
         if (y > 230) { doc.addPage(); y = 20; }
@@ -827,8 +830,11 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     }
 
     // 3B) LISTADO DE GASTOS DEL PERÍODO (from the grupal liquidation itself, isGroupLevel === true)
+    // Use pre-calculated value from screen if available, fallback to filtering allItems
     const expensesByPeriod = (grupal.allItems || []).filter((i: any) => i.tipo === 'Gasto' && i.isGroupLevel);
-    const totalGastosByPeriod = expensesByPeriod.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
+    const totalGastosByPeriod: number = grupal.totalGastosByPeriod != null
+        ? Number(grupal.totalGastosByPeriod)
+        : expensesByPeriod.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
 
     if (expensesByPeriod.length > 0) {
         if (y > 230) { doc.addPage(); y = 20; }
@@ -857,9 +863,6 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
         y = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Combined total gastos (por función + del período) for use in the black box
-    const totalGastos = totalGastosByFunction + totalGastosByPeriod;
-
     // 3C) REPARTO DE ARTISTAS (before the black box)
     if (grupal.consolidatedRepartos && grupal.consolidatedRepartos.length > 0) {
         if (y > 230) { doc.addPage(); y = 20; }
@@ -887,14 +890,25 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     }
 
     // 4) CUADRO NEGRO — RESUMEN DEL PERÍODO
+    // Use pre-calculated values from screen to guarantee exact match with what is displayed
     if (y > 240) { doc.addPage(); y = 20; }
 
-    // Artist payouts to include in the final result calculation
-    const totalArtistPayouts = (grupal.consolidatedRepartos || []).reduce((acc: number, r: any) => acc + (Number(r.monto) || 0), 0);
-    const resultPeriodo = totals.ingresoCia - totalGastos - totalArtistPayouts;
+    const ingresoCia: number = grupal.ingresoCia != null
+        ? Number(grupal.ingresoCia)
+        : totals.ingresoCia;
+    const totalArtistPayouts: number = grupal.totalArtistPayouts != null
+        ? Number(grupal.totalArtistPayouts)
+        : (grupal.consolidatedRepartos || []).reduce((acc: number, r: any) => acc + (Number(r.monto) || 0), 0);
+    const totalGastos = totalGastosByFunction + totalGastosByPeriod;
+    const resultPeriodo = ingresoCia - totalGastos - totalArtistPayouts;
 
-    // Expand box height if there are artist payouts to show
-    const boxHeight = totalArtistPayouts > 0 ? 55 : 45;
+    // Expand box height to show all deduction lines
+    const hasGastosFuncion = totalGastosByFunction > 0;
+    const hasGastosPeriodo = totalGastosByPeriod > 0;
+    const hasArtistas = totalArtistPayouts > 0;
+    const extraLines = (hasGastosFuncion ? 1 : 0) + (hasGastosPeriodo ? 1 : 0) + (hasArtistas ? 1 : 0);
+    const boxHeight = 30 + (extraLines * 8) + 12;
+
     doc.setFillColor(dark[0], dark[1], dark[2]);
     doc.rect(15, y, 180, boxHeight, 'F');
     doc.setTextColor(255, 255, 255);
@@ -902,10 +916,16 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     let boxLineY = y + 12;
-    doc.text(`Ingreso Compañía: ${fmt(totals.ingresoCia)}`, 25, boxLineY);
-    boxLineY += 8;
-    doc.text(`Gastos del Período: - ${fmt(totalGastos)}`, 25, boxLineY);
-    if (totalArtistPayouts > 0) {
+    doc.text(`Ingreso Compañía: ${fmt(ingresoCia)}`, 25, boxLineY);
+    if (hasGastosFuncion) {
+        boxLineY += 8;
+        doc.text(`Gastos por Función: - ${fmt(totalGastosByFunction)}`, 25, boxLineY);
+    }
+    if (hasGastosPeriodo) {
+        boxLineY += 8;
+        doc.text(`Gastos del Período: - ${fmt(totalGastosByPeriod)}`, 25, boxLineY);
+    }
+    if (hasArtistas) {
         boxLineY += 8;
         doc.text(`Reparto Artistas: - ${fmt(totalArtistPayouts)}`, 25, boxLineY);
     }
@@ -920,7 +940,7 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
 
     y += boxHeight + 10;
 
-    // 5) REPARTO DE SOCIOS — RESULTADO FINAL
+    // 5) REPARTO DE SOCIOS DE PRODUCCIÓN
     const socios: any[] = grupal.liquidaciones?.[0]?.funcion?.obra?.socios || [];
     const totalSociosPct = socios.reduce((acc: number, s: any) => acc + (Number(s.porcentaje) || 0), 0);
     const hthPct = Math.max(0, 100 - totalSociosPct);
@@ -957,6 +977,8 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     });
 
     y = (doc as any).lastAutoTable.finalY + 15;
+
+
 
 
     // --- 6) PÁGINAS INDIVIDUALES POR ARTISTA ---

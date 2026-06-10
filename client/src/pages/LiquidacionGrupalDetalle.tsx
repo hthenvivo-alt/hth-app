@@ -258,7 +258,11 @@ const LiquidacionGrupalDetalle: React.FC = () => {
 
     const finalBalanceReal = utilidadAntesDeArtistas - totalRepartosMonto;
 
-    const allItems = [...individualItems, ...items];
+    // Force isGroupLevel: true on period items (not persisted in DB, must be set here)
+    const allItems = [
+        ...individualItems,
+        ...items.map(i => ({ ...i, isGroupLevel: true }))
+    ];
     const totalResultadoCompaniaReal = (grupal.liquidaciones || []).reduce((acc: number, l: any) => acc + (Number(l.resultadoCompania) || 0), 0);
     const totalResultadoFunciones = (grupal.liquidaciones || []).reduce((acc: number, l: any) => acc + (Number(l.repartoProduccionMonto) || Number(l.resultadoFuncion) || 0), 0);
     const totalHthProductora = finalBalanceReal;
@@ -278,6 +282,11 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                 totalHthProductora,
                 finalBalance: finalBalanceReal,
                 allItems,
+                // Pass pre-calculated expense totals so the PDF black box matches the screen exactly
+                totalGastosByFunction: totalGastosShowConsolidados,
+                totalGastosByPeriod: totalGastosGrupo,
+                totalArtistPayouts: totalRepartosMonto,
+                ingresoCia: totalResultadoHthBruto,
                 consolidatedRepartos: Object.values(consolidatedRepartos)
             }
         });
