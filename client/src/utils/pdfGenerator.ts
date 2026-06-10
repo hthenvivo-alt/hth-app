@@ -796,11 +796,8 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     y = (doc as any).lastAutoTable.finalY + 15;
 
     // 3A) LISTADO DE GASTOS POR FUNCIÓN (from individual shows, isGroupLevel === false)
-    // Use pre-calculated value from screen if available, fallback to filtering allItems
     const expensesByFunction = (grupal.allItems || []).filter((i: any) => i.tipo === 'Gasto' && !i.isGroupLevel);
-    const totalGastosByFunction: number = grupal.totalGastosByFunction != null
-        ? Number(grupal.totalGastosByFunction)
-        : expensesByFunction.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
+    const totalGastosByFunction: number = expensesByFunction.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
 
     if (expensesByFunction.length > 0) {
         if (y > 230) { doc.addPage(); y = 20; }
@@ -830,11 +827,8 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     }
 
     // 3B) LISTADO DE GASTOS DEL PERÍODO (from the grupal liquidation itself, isGroupLevel === true)
-    // Use pre-calculated value from screen if available, fallback to filtering allItems
     const expensesByPeriod = (grupal.allItems || []).filter((i: any) => i.tipo === 'Gasto' && i.isGroupLevel);
-    const totalGastosByPeriod: number = grupal.totalGastosByPeriod != null
-        ? Number(grupal.totalGastosByPeriod)
-        : expensesByPeriod.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
+    const totalGastosByPeriod: number = expensesByPeriod.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
 
     if (expensesByPeriod.length > 0) {
         if (y > 230) { doc.addPage(); y = 20; }
@@ -890,15 +884,11 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     }
 
     // 4) CUADRO NEGRO — RESUMEN DEL PERÍODO
-    // Use pre-calculated values from screen to guarantee exact match with what is displayed
+    // ingresoCia comes from the functions table total ("Ingreso Cía" column)
     if (y > 240) { doc.addPage(); y = 20; }
 
-    const ingresoCia: number = grupal.ingresoCia != null
-        ? Number(grupal.ingresoCia)
-        : totals.ingresoCia;
-    const totalArtistPayouts: number = grupal.totalArtistPayouts != null
-        ? Number(grupal.totalArtistPayouts)
-        : (grupal.consolidatedRepartos || []).reduce((acc: number, r: any) => acc + (Number(r.monto) || 0), 0);
+    const ingresoCia: number = totals.ingresoCia;
+    const totalArtistPayouts: number = (grupal.consolidatedRepartos || []).reduce((acc: number, r: any) => acc + (Number(r.monto) || 0), 0);
     const totalGastos = totalGastosByFunction + totalGastosByPeriod;
     const resultPeriodo = ingresoCia - totalGastos - totalArtistPayouts;
 

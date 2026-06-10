@@ -282,15 +282,11 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                 totalHthProductora,
                 finalBalance: finalBalanceReal,
                 allItems,
-                // Pass pre-calculated expense totals so the PDF black box matches the screen exactly
-                totalGastosByFunction: totalGastosShowConsolidados,
-                totalGastosByPeriod: totalGastosGrupo,
-                totalArtistPayouts: totalRepartosMonto,
-                ingresoCia: totalResultadoHthBruto,
                 consolidatedRepartos: Object.values(consolidatedRepartos)
             }
         });
     };
+
 
     const handleSave = () => {
         setIsSaving(true);
