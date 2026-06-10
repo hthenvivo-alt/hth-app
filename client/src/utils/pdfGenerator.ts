@@ -827,7 +827,8 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     }
 
     // 3B) LISTADO DE GASTOS DEL PERÍODO (from the grupal liquidation itself, isGroupLevel === true)
-    const expensesByPeriod = (grupal.allItems || []).filter((i: any) => i.tipo === 'Gasto' && i.isGroupLevel);
+    // Includes BOTH tipo='Gasto' AND tipo='Deduccion' — all period-level items affect the result
+    const expensesByPeriod = (grupal.allItems || []).filter((i: any) => i.isGroupLevel === true);
     const totalGastosByPeriod: number = expensesByPeriod.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
 
     if (expensesByPeriod.length > 0) {
@@ -840,18 +841,19 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
 
         autoTable(doc, {
             startY: y,
-            head: [['Concepto', 'Importe']],
+            head: [['Concepto', 'Tipo', 'Importe']],
             body: [
                 ...expensesByPeriod.map((i: any) => [
                     i.concepto,
+                    i.tipo === 'Deduccion' ? 'Deducción' : 'Gasto',
                     fmt(i.monto)
                 ]),
-                [{ content: 'TOTAL GASTOS DEL PERÍODO', styles: { fontStyle: 'bold', halign: 'right', fillColor: [245, 245, 245] } }, { content: fmt(totalGastosByPeriod), styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }]
+                [{ content: 'TOTAL GASTOS DEL PERÍODO', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [245, 245, 245] } }, { content: fmt(totalGastosByPeriod), styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }]
             ],
             theme: 'striped',
             headStyles: { fillColor: dark as any },
             styles: { fontSize: 8 },
-            columnStyles: { 1: { halign: 'right' } }
+            columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' } }
         });
 
         y = (doc as any).lastAutoTable.finalY + 15;
