@@ -795,38 +795,98 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
 
     y = (doc as any).lastAutoTable.finalY + 15;
 
-    // 3) LISTADO DE GASTOS (Conditional logic: if payout base is "Utilidad")
-    const anyUtilityBase = (grupal.consolidatedRepartos || []).some((r: any) => r.base === 'Utilidad');
-    const expenses = (grupal.allItems || []).filter((i: any) => i.tipo === 'Gasto');
-    const totalGastos = expenses.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
+    // 3A) LISTADO DE GASTOS POR FUNCIÓN (from individual shows, isGroupLevel === false)
+    const expensesByFunction = (grupal.allItems || []).filter((i: any) => i.tipo === 'Gasto' && !i.isGroupLevel);
+    const totalGastosByFunction = expensesByFunction.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
 
-    if (anyUtilityBase && expenses.length > 0) {
+    if (expensesByFunction.length > 0) {
         if (y > 230) { doc.addPage(); y = 20; }
         doc.setTextColor(primary[0], primary[1], primary[2]);
-        doc.text('LISTADO DE GASTOS', 15, y);
-        y += 5;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LISTADO DE GASTOS POR FUNCIÓN', 15, y);
+        y += 6;
 
         autoTable(doc, {
             startY: y,
-            head: [['Concepto', 'Nivel', 'Importe']],
+            head: [['Concepto', 'Importe']],
             body: [
-                ...expenses.map((i: any) => [
+                ...expensesByFunction.map((i: any) => [
                     i.concepto,
-                    i.isGroupLevel ? 'GRUPO' : 'FUNCIÓN',
                     fmt(i.monto)
                 ]),
-                [{ content: 'TOTAL GASTOS', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right', fillColor: [245, 245, 245] } }, { content: fmt(totalGastos), styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }]
+                [{ content: 'TOTAL GASTOS POR FUNCIÓN', styles: { fontStyle: 'bold', halign: 'right', fillColor: [245, 245, 245] } }, { content: fmt(totalGastosByFunction), styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }]
             ],
             theme: 'striped',
             headStyles: { fillColor: dark as any },
             styles: { fontSize: 8 },
-            columnStyles: { 2: { halign: 'right' } }
+            columnStyles: { 1: { halign: 'right' } }
         });
 
         y = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // 4) CLARIFICACION DEL RESULTADO DEL PERIODO
+    // 3B) LISTADO DE GASTOS DEL PERÍODO (from the grupal liquidation itself, isGroupLevel === true)
+    const expensesByPeriod = (grupal.allItems || []).filter((i: any) => i.tipo === 'Gasto' && i.isGroupLevel);
+    const totalGastosByPeriod = expensesByPeriod.reduce((acc: number, i: any) => acc + (Number(i.monto) || 0), 0);
+
+    if (expensesByPeriod.length > 0) {
+        if (y > 230) { doc.addPage(); y = 20; }
+        doc.setTextColor(primary[0], primary[1], primary[2]);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LISTADO DE GASTOS DEL PERÍODO', 15, y);
+        y += 6;
+
+        autoTable(doc, {
+            startY: y,
+            head: [['Concepto', 'Importe']],
+            body: [
+                ...expensesByPeriod.map((i: any) => [
+                    i.concepto,
+                    fmt(i.monto)
+                ]),
+                [{ content: 'TOTAL GASTOS DEL PERÍODO', styles: { fontStyle: 'bold', halign: 'right', fillColor: [245, 245, 245] } }, { content: fmt(totalGastosByPeriod), styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }]
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: dark as any },
+            styles: { fontSize: 8 },
+            columnStyles: { 1: { halign: 'right' } }
+        });
+
+        y = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // Combined total gastos (por función + del período) for use in the black box
+    const totalGastos = totalGastosByFunction + totalGastosByPeriod;
+
+    // 3C) REPARTO DE ARTISTAS (before the black box)
+    if (grupal.consolidatedRepartos && grupal.consolidatedRepartos.length > 0) {
+        if (y > 230) { doc.addPage(); y = 20; }
+        doc.setTextColor(primary[0], primary[1], primary[2]);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPARTO DE ARTISTAS', 15, y);
+        y += 6;
+
+        autoTable(doc, {
+            startY: y,
+            head: [['Beneficiario', 'Base / Condición', 'Monto Bruto / Retenciones', 'Saldo Neto']],
+            body: grupal.consolidatedRepartos.map((r: any) => [
+                `${r.nombreArtista.toUpperCase()} (${r.porcentaje}%)`,
+                r.base,
+                `${fmt(r.monto)} ${r.retencionAAA > 0 ? `(AAA: -${fmt(r.retencionAAA)})` : ''}`,
+                { content: fmt(r.monto - (r.retencionAAA || 0)), styles: { fontStyle: 'bold' } }
+            ]),
+            theme: 'grid',
+            headStyles: { fillColor: dark as any },
+            styles: { fontSize: 8 },
+            columnStyles: { 3: { halign: 'right' } }
+        });
+        y = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // 4) CUADRO NEGRO — RESUMEN DEL PERÍODO
     if (y > 240) { doc.addPage(); y = 20; }
 
     // Artist payouts to include in the final result calculation
@@ -873,7 +933,7 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
     doc.setTextColor(primary[0], primary[1], primary[2]);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('REPARTO DE SOCIOS — RESULTADO FINAL', 15, y);
+    doc.text('REPARTO DE SOCIOS DE PRODUCCIÓN', 15, y);
     y += 8;
 
     const sociosRows = [
@@ -898,34 +958,6 @@ export const generateBatchLiquidacionPDF = async (data: any) => {
 
     y = (doc as any).lastAutoTable.finalY + 15;
 
-    // 5B) PORCENTAJE ARTISTAS
-    if (grupal.consolidatedRepartos && grupal.consolidatedRepartos.length > 0) {
-        if (y > 230) {
-            doc.addPage();
-            y = 20;
-        }
-        doc.setTextColor(primary[0], primary[1], primary[2]);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        const isRevenueOnlyGrupal = !grupal.consolidatedRepartos.some((r: any) => r.base === 'Utilidad');
-        doc.text(isRevenueOnlyGrupal ? 'PORCENTAJE ARTISTAS' : 'REPARTO Y DIVISIÓN DE RESULTADOS', 15, y);
-        y += 8;
-
-        autoTable(doc, {
-            startY: y,
-            head: [['Beneficiario', 'Base / Condición', 'Monto Bruto / Retenciones', 'Saldo Neto']],
-            body: grupal.consolidatedRepartos.map((r: any) => [
-                `${r.nombreArtista.toUpperCase()} (${r.porcentaje}%)`,
-                r.base,
-                `${fmt(r.monto)} ${r.retencionAAA > 0 ? `(AAA: -${fmt(r.retencionAAA)})` : ''}`,
-                { content: fmt(r.monto - (r.retencionAAA || 0)), styles: { fontStyle: 'bold' } }
-            ]),
-            theme: 'grid',
-            headStyles: { fillColor: dark as any },
-            columnStyles: { 3: { halign: 'right' } }
-        });
-        y = (doc as any).lastAutoTable.finalY + 15;
-    }
 
     // --- 6) PÁGINAS INDIVIDUALES POR ARTISTA ---
     for (const r of (grupal.consolidatedRepartos || [])) {
