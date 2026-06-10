@@ -562,13 +562,6 @@ const LiquidacionGrupalDetalle: React.FC = () => {
                             </div>
                             <div className="flex gap-3">
                                 <button
-                                    onClick={() => setItems([...items, { tipo: 'Deduccion', concepto: '', monto: '', isGroupLevel: true, deduceAntesDeSala: true }])}
-                                    className="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-400 transition-all border border-red-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
-                                >
-                                    <Plus size={16} />
-                                    Agregar Deducción
-                                </button>
-                                <button
                                     onClick={() => setItems([...items, { tipo: 'Gasto', concepto: '', monto: '', isGroupLevel: true }])}
                                     className="px-5 py-2.5 bg-primary-500/10 hover:bg-primary-500/20 rounded-xl text-primary-400 transition-all border border-primary-500/20 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
                                 >
